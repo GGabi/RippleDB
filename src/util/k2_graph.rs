@@ -11,59 +11,65 @@ use super::{Triple, CRUD};
      corresponding to a Subject-Object pair connected
      by a single Predicate. */
 struct Graph {
+  dict_max: usize, //The max value in dict, as it's non-trivial to calculate on the fly
   dict: HashMap<String, usize>,
   predicates: HashMap<String, usize>,
-  slices: Vec<GraphSlice>,
+  slices: Vec<Box<k2_tree::K2Tree>>,
 }
 impl CRUD for Graph {
   type IN = Triple;
   type OUT = ();
   type QUERY = ();
   fn new() -> Self {
-    unimplemented!()
-  }
-  fn insert(&mut self, val: Self::IN) -> Result<(), ()> {
-    unimplemented!()
-  }
-  fn remove(&mut self, val: &Self::IN) -> Result<(), ()> {
-    unimplemented!()
-  }
-  fn get(&self, query: &Self::QUERY) -> Self::OUT {
-    unimplemented!()
-  }
-}
-
-/* 2-d bit matrix, each column corresponding to an
-     Object's uid and each row corresponding to a
-     Subject's uid.
-   Every Subject-Object pair is joined by single Predicate.
-   K */
-struct GraphSlice {
-  predicate: String,
-  tree: k2_tree::K2Tree,
-}
-impl CRUD for GraphSlice {
-  type IN = Triple;
-  type OUT = ();
-  type QUERY = ();
-  fn new() -> Self {
-    GraphSlice {
-      predicate: String::new(),
-      tree: k2_tree::K2Tree::new(),
+    Graph {
+      dict_max: 0,
+      dict: HashMap::new(),
+      predicates: HashMap::new(),
+      slices: Vec::new(),
     }
   }
   fn insert(&mut self, val: Self::IN) -> Result<(), ()> {
-    unimplemented!()
+    let graph_coords = (
+      self.dict.get(&val[0]),
+      self.predicates.get(&val[1]),
+      self.dict.get(&val[2])
+    );
+    match graph_coords {
+      (Some(col), Some(slice_index), Some(row)) => {
+        if let Some(slice) = self.slices.get_mut(*slice_index) {
+          slice.set_bit(*col, *row, true)
+        }
+        else {
+          Err(())
+        }
+      },
+      (None, Some(slice_index), Some(row)) => {
+        /* Insert new subject into hashmap and give it the index of current_max+1
+           If the new max is greater than the matrix_widths of slices
+           | For each slice:
+           | | matrix_width *= k
+           | | Insert a new stem of length k**2 at index 0, first bit set to 1
+           | | Update the layer_start to be +k**2 each
+           Set the correct bit in the correct slice to 1*/
+        Err(())
+      },
+      (Some(col), None, Some(row)) => {
+        /* Append a new slice to self.slices, insert to self.predicates
+           New slice must be matrix width of all the others and have the same K-value
+           new_slice.set_bit(col, row) */
+        Err(())
+      },
+      (Some(col), Some(slice_index), None) => Err(()),
+      (None, None, Some(row)) => Err(()),
+      (None, Some(slice_index), None) => Err(()),
+      (Some(col), None, None) => Err(()),
+      (None, None, None) => Err(()),
+    }
   }
   fn remove(&mut self, val: &Self::IN) -> Result<(), ()> {
     unimplemented!()
   }
   fn get(&self, query: &Self::QUERY) -> Self::OUT {
-    unimplemented!()
-  }
-}
-impl GraphSlice {
-  pub fn from(triples: Vec<Triple>) -> Self {
     unimplemented!()
   }
 }
@@ -84,12 +90,12 @@ pub mod k2_tree {
   }
   /* Public Interface */
   impl K2Tree {
-    pub fn new() -> Self {
+    pub fn new(k: usize) -> Self {
       K2Tree {
-        matrix_width: 8,
-        k: 2,
+        matrix_width: k.pow(3),
+        k: k,
         layer_starts: vec![0],
-        stems: bitvec![0,0,0,0],
+        stems: bitvec![0; k*k],
         stem_to_leaf: Vec::new(),
         leaves: BitVec::new(),
       }
@@ -170,16 +176,16 @@ pub mod k2_tree {
             self.stems.set(layer_start + stem_bit_pos, false); //Dead leaf parent bit = 0
             let mut curr_layer = self.layer_starts.len()-1;
             let mut stem_start = layer_start + block_start(stem_bit_pos, 4);
-            while ones_in_range(&self.stems, stem_start, stem_start+3) == 0 {
+            while curr_layer > 0 
+            && ones_in_range(&self.stems, stem_start, stem_start+3) == 0 {
               for layer_start in &mut self.layer_starts[curr_layer+1..] {
                 *layer_start -= 1; //Adjust lower layer start positions to reflect removal of stem
               }
-              let parent_bit = self.parent_bit(stem_start);
+              let (parent_stem_start, bit_offset) = self.parent(stem_start);
               remove_block(&mut self.stems, stem_start, 4)?;
-              self.stems.set(parent_bit, false);
-              stem_start = self.parent_stem(stem_start);
+              self.stems.set(parent_stem_start + bit_offset, false);
+              stem_start = parent_stem_start;
               curr_layer -= 1;
-              if curr_layer == 0 { break } //Reached top layer?
             }
           }
         },
@@ -296,10 +302,9 @@ pub mod k2_tree {
       Ok(())
     }
     pub fn from_matrix(m: Vec<BitVec>) -> Result<Self, ()> {
-      let mut tree = K2Tree::new();
+      let mut tree = K2Tree::new(2);
       for x in 0..m.len() {
         for y in one_positions(&m[x]).into_iter() {
-
           tree.set_bit(x, y, true)?;
         }
       }
@@ -389,7 +394,8 @@ pub mod k2_tree {
       Ok(self.layer_start(layer+1)
       + (self.num_stems_before_child(stem_start+nth_child, layer) * 4))
     }
-    fn parent_stem(&self, stem_start: usize) -> usize {
+    fn parent(&self, stem_start: usize) -> (usize, usize) {
+      /* Returns (stem_start, bit_offset) */
       if stem_start >= self.layer_starts[1] {
         /* If stem isn't in layer 0, look for parent */
         let mut parent_layer_start = 0;
@@ -418,42 +424,19 @@ pub mod k2_tree {
           }
           bit_pos_in_parent_stem_layer += 1;
         }
-        return ((bit_pos_in_parent_stem_layer / 4) * 4) + parent_layer_start
+        (((bit_pos_in_parent_stem_layer / 4) * 4) + parent_layer_start,
+          bit_pos_in_parent_stem_layer % 4)
       }
-      std::usize::MAX
+      else {
+        (std::usize::MAX, std::usize::MAX)
+      }
+    }
+    fn parent_stem(&self, stem_start: usize) -> usize {
+      self.parent(stem_start).0
     }
     fn parent_bit(&self, stem_start: usize) -> usize {
-      if stem_start >= self.layer_starts[1] {
-        /* If stem isn't in layer 0, look for parent */
-        let mut parent_layer_start = 0;
-        let mut curr_layer_start = 0;
-        for (i, layer_start) in (0..self.layer_starts.len()).enumerate() {
-          if i == self.layer_starts.len()-1 {
-            if stem_start >= self.layer_starts[layer_start]
-            && stem_start < self.stems.len() {
-              parent_layer_start = self.layer_starts[layer_start-1];
-              curr_layer_start = self.layer_starts[layer_start];
-            }
-          }
-          else if stem_start >= self.layer_starts[layer_start]
-          && stem_start < self.layer_starts[layer_start+1] {
-            parent_layer_start = self.layer_starts[layer_start-1];
-            curr_layer_start = self.layer_starts[layer_start];
-          }
-        }
-        let nth_stem_in_layer = (stem_start - curr_layer_start)/4;
-        let mut i = 0;
-        let mut bit_pos_in_parent_stem_layer = 0;
-        for bit in &self.stems[parent_layer_start..curr_layer_start] {
-          if bit {
-            if i == nth_stem_in_layer { break }
-            i += 1;
-          }
-          bit_pos_in_parent_stem_layer += 1;
-        }
-        return bit_pos_in_parent_stem_layer + parent_layer_start
-      }
-      std::usize::MAX
+      let (stem_start, bit_offset) = self.parent(stem_start);
+      stem_start + bit_offset
     }
   }
   fn block_start(bit_pos: usize, block_len: usize) -> usize {
