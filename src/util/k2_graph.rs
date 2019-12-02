@@ -37,7 +37,7 @@ impl CRUD for Graph {
     match graph_coords {
       (Some(col), Some(slice_index), Some(row)) => {
         if let Some(slice) = self.slices.get_mut(*slice_index) {
-          slice.set_bit(*col, *row, true)
+          slice.set_bit_at(*col, *row, true)
         }
         else {
           Err(())
@@ -56,7 +56,7 @@ impl CRUD for Graph {
       (Some(col), None, Some(row)) => {
         /* Append a new slice to self.slices, insert to self.predicates
            New slice must be matrix width of all the others and have the same K-value
-           new_slice.set_bit(col, row) */
+           new_slice.set_bit_at(col, row) */
         Err(())
       },
       (Some(col), Some(slice_index), None) => Err(()),
@@ -114,7 +114,7 @@ pub mod k2_tree {
         leaves: bitvec![0,1,1,0, 0,1,0,1, 1,1,0,0, 1,0,0,0, 0,1,1,0],
       }
     }
-    pub fn get_bit(&self, x: usize, y: usize) -> bool {
+    pub fn bit_at(&self, x: usize, y: usize) -> bool {
       /* Assuming k=2 */
       if let DescendResult::Leaf(leaf_start, leaf_range) = self.matrix_bit(x, y, self.matrix_width) {
         if leaf_range[0][1] - leaf_range[0][0] != 1
@@ -136,7 +136,7 @@ pub mod k2_tree {
         return false
       }
     }
-    pub fn set_bit(&mut self, x: usize, y: usize, state: bool) -> Result<(), ()> {
+    pub fn set_bit_at(&mut self, x: usize, y: usize, state: bool) -> Result<(), ()> {
       /* Assuming k=2 */
       match self.matrix_bit(x, y, self.matrix_width) {
         DescendResult::Leaf(leaf_start, leaf_range) => {
@@ -293,10 +293,114 @@ pub mod k2_tree {
       let mut tree = K2Tree::new(2);
       for x in 0..m.len() {
         for y in one_positions(&m[x]).into_iter() {
-          tree.set_bit(x, y, true)?;
+          tree.set_bit_at(x, y, true)?;
         }
       }
       Ok(tree)
+    }
+    pub fn stems(&self) -> Stems {
+      Stems {
+        tree: &self,
+        pos: 0,
+        layer: 0,
+        stem: 0,
+        bit: 0,
+      }
+    }
+    pub fn stems_raw(&self) -> StemsRaw {
+      StemsRaw {
+        stems: &self.stems,
+        pos: 0,
+      }
+    }
+    pub fn leaves(&self) -> Leaves {
+      Leaves {
+        tree: &self,
+        pos: 0,
+      }
+    }
+    pub fn leaves_raw(&self) -> LeavesRaw {
+      LeavesRaw {
+        leaves: &self.leaves,
+        pos: 0,
+      }
+    }
+  }
+  /* Iterators */
+  pub struct StemBit {
+    value: bool,
+    layer: usize,
+    stem: usize,
+    bit: usize,
+  }
+  pub struct LeafBit {
+    value: bool,
+    x: usize,
+    y: usize,
+  }
+  pub struct Stems<'a> {
+    tree: &'a K2Tree,
+    pos: usize,
+    layer: usize,
+    stem: usize,
+    bit: usize,
+  }
+  impl<'a> Iterator for Stems<'a> {
+    type Item = StemBit;
+    fn next(&mut self) -> Option<Self::Item> {
+      if self.pos >= self.tree.stems.len() {
+        return None
+      }
+      let value = self.tree.stems[self.pos];
+      let ret_v = Some(StemBit {
+        value: value,
+        layer: self.layer,
+        stem: self.stem,
+        bit: self.bit,
+      });
+      self.bit = (self.bit + 1) % 4;
+      if self.bit == 0 { self.stem = (self.stem + 1) % self.tree.layer_len(self.layer); }
+      if self.stem == 0 { self.layer += 1; }
+      ret_v
+    }
+  }
+  pub struct Leaves<'a> {
+    tree: &'a K2Tree,
+    pos: usize,
+  }
+  impl<'a> Iterator for Leaves<'a> {
+    type Item = LeafBit;
+    fn next(&mut self) -> Option<Self::Item> {
+      /* Need get_coords(bit_pos) function for leaf bits for this */
+      unimplemented!()
+    }
+  }
+  pub struct StemsRaw<'a> {
+    stems: &'a BitVec,
+    pos: usize,
+  }
+  impl<'a> Iterator for StemsRaw<'a> {
+    type Item = bool;
+    fn next(&mut self) -> Option<Self::Item> {
+      if self.pos >= self.stems.len() {
+        return None
+      }
+      self.pos += 1;
+      Some(self.stems[self.pos])
+    }
+  }
+  pub struct LeavesRaw<'a> {
+    leaves: &'a BitVec,
+    pos: usize,
+  }
+  impl<'a> Iterator for LeavesRaw<'a> {
+    type Item = bool;
+    fn next(&mut self) -> Option<Self::Item> {
+      if self.pos >= self.leaves.len() {
+        return None
+      }
+      self.pos += 1;
+      Some(self.leaves[self.pos])
     }
   }
    /* Std Traits */
@@ -676,7 +780,7 @@ pub mod k2_tree {
     fn set_bit_0() {
       let mut tree = K2Tree::test_tree();
       assert_eq!(tree.leaves[18], true);
-      tree.set_bit(4, 5, false);
+      tree.set_bit_at(4, 5, false);
       assert_eq!(tree.leaves[18], false);
     }
     #[test]
@@ -685,8 +789,8 @@ pub mod k2_tree {
       assert_eq!(tree.stems, bitvec![0,1,1,1,1,1,0,1,1,0,0,0,1,0,0,0]);
       assert_eq!(tree.leaves, bitvec![0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0,0,1,1,0]);
       assert_eq!(tree.stem_to_leaf, vec![0, 1, 3, 4, 8]);
-      tree.set_bit(4, 5, false);
-      tree.set_bit(5, 4, false);
+      tree.set_bit_at(4, 5, false);
+      tree.set_bit_at(5, 4, false);
       assert_eq!(tree.stems, bitvec![0,1,1,0,1,1,0,1,1,0,0,0]);
       assert_eq!(tree.leaves, bitvec![0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0]);
       assert_eq!(tree.stem_to_leaf, vec![0, 1, 3, 4]);
@@ -697,9 +801,9 @@ pub mod k2_tree {
       assert_eq!(tree.stems, bitvec![0,1,1,1,1,1,0,1,1,0,0,0,1,0,0,0]);
       assert_eq!(tree.leaves, bitvec![0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0,0,1,1,0]);
       assert_eq!(tree.stem_to_leaf, vec![0, 1, 3, 4, 8]);
-      tree.set_bit(4, 5, false);
-      tree.set_bit(5, 4, false);
-      tree.set_bit(0, 0, true);
+      tree.set_bit_at(4, 5, false);
+      tree.set_bit_at(5, 4, false);
+      tree.set_bit_at(0, 0, true);
       assert_eq!(tree.stems, bitvec![1,1,1,0,1,0,0,0,1,1,0,1,1,0,0,0]);
       assert_eq!(tree.leaves, bitvec![1,0,0,0,0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0]);
       assert_eq!(tree.stem_to_leaf, vec![0, 4, 5, 7, 8]);
@@ -708,19 +812,19 @@ pub mod k2_tree {
     fn show_me_the_changes() {
       let mut tree = K2Tree::test_tree();
       println!("{:#?}", tree);
-      tree.set_bit(4, 5, false);
+      tree.set_bit_at(4, 5, false);
       println!("{:#?}", tree);
-      tree.set_bit(5, 4, false);
+      tree.set_bit_at(5, 4, false);
       println!("{:#?}", tree);
-      tree.set_bit(0, 4, false);
+      tree.set_bit_at(0, 4, false);
       println!("{:#?}", tree);
-      tree.set_bit(0, 0, true);
+      tree.set_bit_at(0, 0, true);
       println!("{:#?}", tree);
-      tree.set_bit(0, 1, true);
+      tree.set_bit_at(0, 1, true);
       println!("{:#?}", tree);
-      tree.set_bit(7, 7, true);
+      tree.set_bit_at(7, 7, true);
       println!("{:#?}", tree);
-      tree.set_bit(5, 4, true);
+      tree.set_bit_at(5, 4, true);
       println!("{:#?}", tree);
 
       println!("{}", tree);
