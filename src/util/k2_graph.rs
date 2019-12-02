@@ -79,16 +79,16 @@ pub mod k2_tree {
     prelude::bitvec,
     vec::BitVec
   };
-  #[derive(Debug, Clone, PartialEq)]
+  #[derive(Debug, Clone, Hash)]
   pub struct K2Tree {
-    matrix_width: usize,
-    k: usize, //k^2 == number of submatrices in each stem/leaf
+    pub matrix_width: usize,
+    pub k: usize, //k^2 == number of submatrices in each stem/leaf
     layer_starts: Vec<usize>,
     stems: BitVec,
     stem_to_leaf: Vec<usize>,
     leaves: BitVec,
   }
-  /* Public Interface */
+  /* Public */
   impl K2Tree {
     pub fn new(k: usize) -> Self {
       K2Tree {
@@ -115,7 +115,7 @@ pub mod k2_tree {
       if let DescendResult::Leaf(leaf_start, leaf_range) = self.matrix_bit(x, y, self.matrix_width) {
         if leaf_range[0][1] - leaf_range[0][0] != 1
         || leaf_range[0][1] - leaf_range[0][0] != 1 {
-          /* ERROR: Final submatrix isn't a 2 by 2 so can't be a leaf */
+          /* ERROR: Final submatrix isn't 2x2 so can't be a leaf */
         }
         if x == leaf_range[0][0] {
           if y == leaf_range[1][0] { return self.leaves[leaf_start] }
@@ -197,103 +197,88 @@ pub mod k2_tree {
            - Construct needed stems until reach final layer
            - Construct leaf corresponding to range containing (x, y)
            - Set bit at (x, y) to 1 */
-          let mut layer = self.layer_from_range(stem_range);
+          let mut layer_starts_len = self.layer_starts.len();
           let layer_max = self.total_layers()-2; //Leaf layer doesn't count
-          let layer_starts_len = self.layer_starts.len();
-          /* If Stem at last layer already exists: skip straight to creating leaf */
-          if layer == layer_max {
-            let subranges = to_4_subranges(stem_range);
+          let mut layer = self.layer_from_range(stem_range);
+          let mut subranges: [Range; 4];
+          /* Create correct stems in layers on the way down to the final layer,
+          which points to the leaves */
+          while layer < layer_max {
+            subranges = to_4_subranges(stem_range);
             for child_pos in 0..4 {
               if within_range(&subranges[child_pos], x, y) {
+                /* Change bit containing (x, y) to 1 */
                 self.stems.set(stem_start + child_pos, true);
-                let layer_bit_pos = (stem_start + child_pos) - self.layer_starts[self.layer_starts.len()-1];
-                /* Find position to insert new elem in stem_to_leaf */
-                let mut stem_to_leaf_pos: usize = 0;
-                while stem_to_leaf_pos < self.stem_to_leaf.len()
-                && self.stem_to_leaf[stem_to_leaf_pos] < layer_bit_pos {
-                  stem_to_leaf_pos += 1;
-                }
-                self.stem_to_leaf.insert(stem_to_leaf_pos, layer_bit_pos);
-                /* Create new leaf of all 0's */
-                let leaf_start = stem_to_leaf_pos * 4;
-                insert_block(&mut self.leaves, leaf_start, 4)?;
-                /* Change bit at (x, y) to 1 */
-                let leaf_range = subranges[child_pos];
-                if x == leaf_range[0][0] {
-                  if y == leaf_range[1][0] { self.leaves.set(leaf_start, true); }
-                  else { self.leaves.set(leaf_start+2, true); }
+                /* If we're not at max possible layer, but at the lowest
+                but at the lowest existing layer: Create new layer before
+                adding new stem to it.
+                Otherwise: Find the correct position to add the new stem
+                in the child layer. */
+                if layer == layer_starts_len-1 {
+                  stem_start = self.stems.len();
+                  self.layer_starts.push(stem_start);
+                  layer_starts_len += 1;
                 }
                 else {
-                  if y == leaf_range[1][0] { self.leaves.set(leaf_start+1, true); }
-                  else { self.leaves.set(leaf_start+3, true); }
+                  stem_start = self.child_stem(layer, stem_start, child_pos)?;
                 }
-                return Ok(())
+                /* We're now working on the child layer */
+                layer += 1;
+                stem_range = subranges[child_pos];
+                insert_block(&mut self.stems, stem_start, 4)?;
+                /* If there are layers after the one we just insert a stem
+                into: Increase the layer_starts for them by 4 to account for
+                the extra stem */
+                if layer+1 <= layer_starts_len {
+                  for layer_start in &mut self.layer_starts[layer+1..layer_starts_len] {
+                    *layer_start += 4;
+                  }
+                }
+                break //We've found the child, skip to next layer
               }
             }
           }
-          while layer <= layer_max {
-            let subranges = to_4_subranges(stem_range);
-            for child_pos in 0..4 {
-              if within_range(&subranges[child_pos], x, y) {
-                if layer == layer_max {
-                  /* We've reached the final stem layer and this is the final loop iteration,
-                  add the stem, add the leaf, link the two together then change the
-                  bit at (x, y) to 1 */
-                  self.stems.set(stem_start + child_pos, true);
-                  let layer_bit_pos = (stem_start + child_pos) - self.layer_starts[self.layer_starts.len()-1];
-                  /* Find position to insert new elem in stem_to_leaf */
-                  let mut stem_to_leaf_pos: usize = 0;
-                  while stem_to_leaf_pos < self.stem_to_leaf.len()
-                  && self.stem_to_leaf[stem_to_leaf_pos] < layer_bit_pos {
-                    stem_to_leaf_pos += 1;
-                  }
-                  self.stem_to_leaf.insert(stem_to_leaf_pos, layer_bit_pos);
-                  /* Added a stem block in final layer, increase bit positions in stem_to_leaf
-                  after the new elem by 4 to stay accurate */
-                  let stem_to_leaf_len = self.stem_to_leaf.len();
-                  for parent_bit_pos in &mut self.stem_to_leaf[stem_to_leaf_pos+1..stem_to_leaf_len] {
-                    *parent_bit_pos += 4;
-                  }
-                  /* Create new leaf of all 0's */
-                  let leaf_start = stem_to_leaf_pos * 4;
-                  insert_block(&mut self.leaves, leaf_start, 4)?;
-                  let leaf_range = subranges[child_pos];
-                  /* Change bit at (x, y) to 1 */
-                  if x == leaf_range[0][0] {
-                    if y == leaf_range[1][0] { self.leaves.set(leaf_start, true); }
-                    else { self.leaves.set(leaf_start+2, true); }
-                  }
-                  else {
-                    if y == leaf_range[1][0] { self.leaves.set(leaf_start+1, true); }
-                    else { self.leaves.set(leaf_start+3, true); }
-                  }
-                  return Ok(())
-                }
-                else {
-                  /* - Change bit containing (x, y) to 1
-                     - Get the start position of where the child stem
-                       should be and create new stem of 0s there
-                     - Update the layer_starts */
-                  self.stems.set(stem_start + child_pos, true);
-                  if layer == layer_starts_len-1 {
-                    stem_start = self.stems.len();
-                    self.layer_starts.push(stem_start);
-                  }
-                  else {
-                    stem_start = self.child_stem(layer, stem_start, child_pos)?;
-                  }
-                  insert_block(&mut self.stems, stem_start, 4)?;
-                  if layer+2 <= layer_starts_len {
-                    for layer_start in &mut self.layer_starts[layer+2..layer_starts_len] {
-                      *layer_start += 4;
-                    }
-                  }
-                  stem_range = subranges[child_pos];
-                  break
+          /* We're at the final stem layer */
+          subranges = to_4_subranges(stem_range);
+          for child_pos in 0..4 {
+            if within_range(&subranges[child_pos], x, y) {
+              /* Keep track of whether this stem is freshly created (all 0000s) */
+              let fresh_stem: bool = ones_in_range(&self.stems, stem_start, stem_start+4) == 0;
+              /* Set the correct stem bit to 1 */
+              self.stems.set(stem_start + child_pos, true);
+              /* Get the bit position within the final stem layer,
+              find the position in stem_to_leaf to insert the linking elem,
+              insert linking elem */
+              let layer_bit_pos = (stem_start + child_pos) - self.layer_starts[layer_starts_len-1];
+              let mut stem_to_leaf_pos: usize = 0;
+              while stem_to_leaf_pos < self.stem_to_leaf.len()
+              && self.stem_to_leaf[stem_to_leaf_pos] < layer_bit_pos {
+                stem_to_leaf_pos += 1;
+              }
+              self.stem_to_leaf.insert(stem_to_leaf_pos, layer_bit_pos);
+              /* If stem is fresh, increase bit positions in stem_to_leaf
+              after the new elem by 4 to account for the new stem before them */
+              if fresh_stem {
+                let stem_to_leaf_len = self.stem_to_leaf.len();
+                for parent_bit_pos in &mut self.stem_to_leaf[stem_to_leaf_pos+1..stem_to_leaf_len] {
+                  *parent_bit_pos += 4;
                 }
               }
+              /* Create new leaf of all 0's */
+              let leaf_start = stem_to_leaf_pos * 4;
+              insert_block(&mut self.leaves, leaf_start, 4)?;
+              /* Change bit at (x, y) to 1 */
+              let leaf_range = subranges[child_pos];
+              if x == leaf_range[0][0] {
+                if y == leaf_range[1][0] { self.leaves.set(leaf_start, true); }
+                else { self.leaves.set(leaf_start+2, true); }
+              }
+              else {
+                if y == leaf_range[1][0] { self.leaves.set(leaf_start+1, true); }
+                else { self.leaves.set(leaf_start+3, true); }
+              }
+              return Ok(())
             }
-            layer += 1;
           }
         }
         DescendResult::Nothing => return Err(()), //Descend didn't stop at stem or leaf, should be impossible
@@ -311,7 +296,7 @@ pub mod k2_tree {
       Ok(tree)
     }
   }
-  /* Utils */
+  /* Private */
   type Range = [[usize; 2]; 2];
   enum DescendResult {
     Leaf(usize, Range), //leaf_start, leaf_range
@@ -489,6 +474,16 @@ pub mod k2_tree {
   pub mod unit_tests {
     use super::*;
     #[test]
+    fn test_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<K2Tree>();
+    }
+    #[test]
+    fn test_sync() {
+        fn assert_sync<T: Sync>() {}
+        assert_sync::<K2Tree>();
+    }
+    #[test]
     fn from_matrix_0() {
       let m = vec![
         bitvec![0,0,0,0,1,0,0,0],
@@ -642,6 +637,75 @@ pub mod k2_tree {
       println!("{:#?}", tree);
       tree.set_bit(5, 4, true);
       println!("{:#?}", tree);
+
+      println!("{}", tree);
+    }
+  }
+  /* Std Traits */
+  impl core::fmt::Display for K2Tree {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+      if self.leaves.len() == 0 { return write!(f, "[0000]") }
+      let mut s = String::new();
+      let mut i: usize = 1;
+      for layer_num in 0..self.layer_starts.len() {
+        for bit_pos in self.layer_start(layer_num)..self.layer_start(layer_num+1) {
+          if self.stems[bit_pos] {
+            s.push('1');
+          }
+          else {
+            s.push('0');
+          }
+          if i == self.k*self.k
+          && (bit_pos - self.layer_start(layer_num)) < self.layer_len(layer_num)-1 {
+            s.push(',');
+            i = 1;
+          } 
+          else {
+            i += 1;
+          }
+        }
+        i = 1;
+        s.push_str("::");
+      }
+      i = 1;
+      for bit_pos in 0..self.leaves.len() {
+        if self.leaves[bit_pos] {
+          s.push('1');
+        }
+        else {
+          s.push('0');
+        }
+        if i == self.k*self.k
+        && bit_pos < self.leaves.len()-1 {
+          s.push(',');
+          i = 1;
+        } 
+        else {
+          i += 1;
+        }
+      }
+      write!(f, "[{}]", s)
+    }
+  }
+  impl PartialEq for K2Tree {
+    fn eq(&self, other: &Self) -> bool {
+      self.k == other.k
+      && self.matrix_width == other.matrix_width
+      && self.stems == other.stems
+      && self.leaves == self.leaves
+    }
+  }
+  impl Eq for K2Tree {}
+  impl Default for K2Tree {
+    fn default() -> Self {
+      Self::new(2)
+    }
+  }
+  impl std::convert::TryFrom<Vec<BitVec>> for K2Tree {
+    type Error = &'static str;
+    fn try_from(bit_matrix: Vec<BitVec>) -> Result<Self, Self::Error> {
+      /* Implement error checking here */
+      Ok(Self::from_matrix(bit_matrix).unwrap())
     }
   }
 }
