@@ -79,6 +79,7 @@ pub mod k2_tree {
     prelude::bitvec,
     vec::BitVec
   };
+  pub type BitMatrix = Vec<BitVec>;
   #[derive(Debug, Clone, Hash)]
   pub struct K2Tree {
     pub matrix_width: usize,
@@ -91,7 +92,10 @@ pub mod k2_tree {
   }
   /* Public */
   impl K2Tree {
-    pub fn new(k: usize) -> Self {
+    /* Creation */
+    pub fn new() -> Self {
+      /* For now fix k as 2, further work to make it user-defined */
+      let k: usize = 2;
       let mw = k.pow(3);
       K2Tree {
         matrix_width: mw,
@@ -114,6 +118,7 @@ pub mod k2_tree {
         leaves: bitvec![0,1,1,0, 0,1,0,1, 1,1,0,0, 1,0,0,0, 0,1,1,0],
       }
     }
+    /* Operation */
     pub fn bit_at(&self, x: usize, y: usize) -> bool {
       /* Assuming k=2 */
       if let DescendResult::Leaf(leaf_start, leaf_range) = self.matrix_bit(x, y, self.matrix_width) {
@@ -289,15 +294,7 @@ pub mod k2_tree {
       }
       Ok(())
     }
-    pub fn from_matrix(m: Vec<BitVec>) -> Result<Self, ()> {
-      let mut tree = K2Tree::new(2);
-      for x in 0..m.len() {
-        for y in one_positions(&m[x]).into_iter() {
-          tree.set_bit_at(x, y, true)?;
-        }
-      }
-      Ok(tree)
-    }
+    /* Iteration */
     pub fn stems(&self) -> Stems {
       Stems {
         tree: &self,
@@ -325,6 +322,34 @@ pub mod k2_tree {
         pos: 0,
       }
     }
+    /* Mutation */
+    fn grow(&mut self) {
+      self.matrix_width *= self.k;
+      self.max_slayers += 1;
+      for slayer_start in &mut self.slayer_starts {
+        *slayer_start += 4;
+      }
+      self.slayer_starts.insert(0, 0);
+      /* Insert 1000 to beginning of stems */
+      for _ in 0..3 { self.stems.insert(0, false); }
+      self.stems.insert(0, true);
+    }
+    fn shrink(&mut self) -> Result<(), ()> { unimplemented!() }
+    /* To / From */
+    fn into_matrix(self) -> BitMatrix { unimplemented!() }
+    fn to_matrix(&self) -> BitMatrix { unimplemented!() }
+    pub fn from_matrix(m: BitMatrix) -> Result<Self, ()> {
+      let mut tree = K2Tree::new();
+      for x in 0..m.len() {
+        for y in one_positions(&m[x]).into_iter() {
+          tree.set_bit_at(x, y, true)?;
+        }
+      }
+      Ok(tree)
+    }
+    /* Serialization / Deserialization */
+    fn to_json(&self) { unimplemented!() }
+    fn into_json(self) { unimplemented!() }
   }
   /* Iterators */
   pub struct StemBit {
@@ -460,12 +485,12 @@ pub mod k2_tree {
   impl Eq for K2Tree {}
   impl Default for K2Tree {
     fn default() -> Self {
-      Self::new(2)
+      Self::new()
     }
   }
-  impl std::convert::TryFrom<Vec<BitVec>> for K2Tree {
+  impl std::convert::TryFrom<BitMatrix> for K2Tree {
     type Error = &'static str;
-    fn try_from(bit_matrix: Vec<BitVec>) -> Result<Self, Self::Error> {
+    fn try_from(bit_matrix: BitMatrix) -> Result<Self, Self::Error> {
       /* Implement error checking here */
       Ok(Self::from_matrix(bit_matrix).unwrap())
     }
