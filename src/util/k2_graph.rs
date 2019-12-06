@@ -30,34 +30,57 @@ impl CRUD for Graph {
   }
   fn insert(&mut self, val: Self::IN) -> Result<(), ()> {
     let graph_coords = (
-      self.dict.get(&val[0]),
-      self.predicates.get(&val[1]),
-      self.dict.get(&val[2])
+      /* Copy out to remove lingering reference
+      so the borrow-checker doesn't have a fit
+      later on */
+      match self.dict.get(&val[0]) {
+        Some(&col) => Some(col),
+        None => None,
+      },
+      match self.predicates.get(&val[1]) {
+        Some(&slice_index) => Some(slice_index),
+        None => None,
+      },
+      match self.dict.get(&val[2]) {
+        Some(&row) => Some(row),
+        None => None,
+      }
     );
     match graph_coords {
       (Some(col), Some(slice_index), Some(row)) => {
-        if let Some(slice) = self.slices.get_mut(*slice_index) {
-          slice.set_bit_at(*col, *row, true)
+        if let Some(slice) = self.slices.get_mut(slice_index) {
+          slice.set(col, row, true)
         }
         else {
           Err(())
         }
       },
       (None, Some(slice_index), Some(row)) => {
-        /* Insert new subject into hashmap and give it the index of current_max+1
-           If the new max is greater than the matrix_widths of slices
-           | For each slice:
-           | | matrix_width *= k
-           | | Insert a new stem of length k**2 at index 0, first bit set to 1
-           | | Update the layer_start to be +k**2 each
-           Set the correct bit in the correct slice to 1*/
-        Err(())
+        self.dict_max += 1;
+        self.dict.insert(val[0].clone(), self.dict_max);
+        if self.slices.len() > 0
+        && self.dict_max > self.slices[0].matrix_width() {
+          for slice in &mut self.slices {
+            slice.grow()
+          }
+        }
+        if let Some(slice) = self.slices.get_mut(slice_index) {
+          slice.set(self.dict_max, row, true)
+        }
+        else {
+          Err(())
+        }
       },
       (Some(col), None, Some(row)) => {
-        /* Append a new slice to self.slices, insert to self.predicates
-           New slice must be matrix width of all the others and have the same K-value
-           new_slice.set_bit_at(col, row) */
-        Err(())
+        self.slices.push(Box::new(k2_tree::K2Tree::new()));
+        let slice_len = self.slices.len();
+        self.predicates.insert(val[1].clone(), slice_len-1);
+        let desired_size = self.slices[0].matrix_width();
+        let new_slice = &mut self.slices[slice_len-1];
+        while new_slice.matrix_width() < desired_size {
+          new_slice.grow();
+        }
+        new_slice.set(col, row, true)
       },
       (Some(col), Some(slice_index), None) => Err(()),
       (None, None, Some(row)) => Err(()),
@@ -82,8 +105,8 @@ pub mod k2_tree {
   pub type BitMatrix = Vec<BitVec>;
   #[derive(Debug, Clone, Hash)]
   pub struct K2Tree {
-    pub matrix_width: usize,
-    pub k: usize, //k^2 == number of submatrices in each stem/leaf
+    matrix_width: usize,
+    k: usize, //k^2 == number of submatrices in each stem/leaf
     max_slayers: usize, //max stem layers
     slayer_starts: Vec<usize>, //stem layer starts
     stems: BitVec,
@@ -119,7 +142,7 @@ pub mod k2_tree {
       }
     }
     /* Operation */
-    pub fn bit_at(&self, x: usize, y: usize) -> bool {
+    pub fn get(&self, x: usize, y: usize) -> bool {
       /* Assuming k=2 */
       if let DescendResult::Leaf(leaf_start, leaf_range) = self.matrix_bit(x, y, self.matrix_width) {
         if leaf_range[0][1] - leaf_range[0][0] != 1
@@ -141,7 +164,7 @@ pub mod k2_tree {
         return false
       }
     }
-    pub fn set_bit_at(&mut self, x: usize, y: usize, state: bool) -> Result<(), ()> {
+    pub fn set(&mut self, x: usize, y: usize, state: bool) -> Result<(), ()> {
       /* Assuming k=2 */
       match self.matrix_bit(x, y, self.matrix_width) {
         DescendResult::Leaf(leaf_start, leaf_range) => {
@@ -294,6 +317,13 @@ pub mod k2_tree {
       }
       Ok(())
     }
+    /* Information */
+    pub fn matrix_width(&self) -> usize {
+      self.matrix_width
+    }
+    pub fn k(&self) -> usize {
+      self.k
+    }
     /* Iteration */
     pub fn stems(&self) -> Stems {
       Stems {
@@ -323,7 +353,7 @@ pub mod k2_tree {
       }
     }
     /* Mutation */
-    fn grow(&mut self) {
+    pub fn grow(&mut self) {
       self.matrix_width *= self.k;
       self.max_slayers += 1;
       for slayer_start in &mut self.slayer_starts {
@@ -334,22 +364,54 @@ pub mod k2_tree {
       for _ in 0..3 { self.stems.insert(0, false); }
       self.stems.insert(0, true);
     }
-    fn shrink(&mut self) -> Result<(), ()> { unimplemented!() }
+    pub fn shrink(&mut self) -> Result<(), ()> {
+      // TODO: Add proper errors
+      if self.matrix_width <= self.k.pow(3) {
+        /* Can't shrink beyond the minimum useful,
+        redundant cells in a too-large matrix is negligible
+        anyway cause they'll be compressed out as 0s by the
+        tree */
+        return Err(())
+      }
+      else if &self.stems[0..4] != bitvec![1,0,0,0] {
+        /* Shrinking would lose information, can't have that */
+        return Err(())
+      }
+      self.matrix_width /= self.k;
+      self.max_slayers -= 1;
+      self.slayer_starts.remove(0);
+      for slayer_start in &mut self.slayer_starts {
+        *slayer_start -= 4;
+      }
+      /* Remove top layer stem */
+      for _ in 0..4 { self.stems.remove(0); }
+      Ok(())
+    }
+    pub unsafe fn shrink_unchecked(&mut self) {
+      self.matrix_width /= self.k;
+      self.max_slayers -= 1;
+      self.slayer_starts.remove(0);
+      for slayer_start in &mut self.slayer_starts {
+        *slayer_start -= 4;
+      }
+      /* Remove top layer stem */
+      for _ in 0..4 { self.stems.remove(0); }
+    }
     /* To / From */
-    fn into_matrix(self) -> BitMatrix { unimplemented!() }
-    fn to_matrix(&self) -> BitMatrix { unimplemented!() }
+    pub fn into_matrix(self) -> BitMatrix { unimplemented!() }
+    pub fn to_matrix(&self) -> BitMatrix { unimplemented!() }
     pub fn from_matrix(m: BitMatrix) -> Result<Self, ()> {
       let mut tree = K2Tree::new();
       for x in 0..m.len() {
         for y in one_positions(&m[x]).into_iter() {
-          tree.set_bit_at(x, y, true)?;
+          tree.set(x, y, true)?;
         }
       }
       Ok(tree)
     }
     /* Serialization / Deserialization */
-    fn to_json(&self) { unimplemented!() }
-    fn into_json(self) { unimplemented!() }
+    pub fn to_json(&self) { unimplemented!() }
+    pub fn into_json(self) { unimplemented!() }
   }
   /* Iterators */
   pub struct StemBit {
@@ -805,7 +867,7 @@ pub mod k2_tree {
     fn set_bit_0() {
       let mut tree = K2Tree::test_tree();
       assert_eq!(tree.leaves[18], true);
-      tree.set_bit_at(4, 5, false);
+      tree.set(4, 5, false);
       assert_eq!(tree.leaves[18], false);
     }
     #[test]
@@ -814,8 +876,8 @@ pub mod k2_tree {
       assert_eq!(tree.stems, bitvec![0,1,1,1,1,1,0,1,1,0,0,0,1,0,0,0]);
       assert_eq!(tree.leaves, bitvec![0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0,0,1,1,0]);
       assert_eq!(tree.stem_to_leaf, vec![0, 1, 3, 4, 8]);
-      tree.set_bit_at(4, 5, false);
-      tree.set_bit_at(5, 4, false);
+      tree.set(4, 5, false);
+      tree.set(5, 4, false);
       assert_eq!(tree.stems, bitvec![0,1,1,0,1,1,0,1,1,0,0,0]);
       assert_eq!(tree.leaves, bitvec![0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0]);
       assert_eq!(tree.stem_to_leaf, vec![0, 1, 3, 4]);
@@ -826,9 +888,9 @@ pub mod k2_tree {
       assert_eq!(tree.stems, bitvec![0,1,1,1,1,1,0,1,1,0,0,0,1,0,0,0]);
       assert_eq!(tree.leaves, bitvec![0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0,0,1,1,0]);
       assert_eq!(tree.stem_to_leaf, vec![0, 1, 3, 4, 8]);
-      tree.set_bit_at(4, 5, false);
-      tree.set_bit_at(5, 4, false);
-      tree.set_bit_at(0, 0, true);
+      tree.set(4, 5, false);
+      tree.set(5, 4, false);
+      tree.set(0, 0, true);
       assert_eq!(tree.stems, bitvec![1,1,1,0,1,0,0,0,1,1,0,1,1,0,0,0]);
       assert_eq!(tree.leaves, bitvec![1,0,0,0,0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0]);
       assert_eq!(tree.stem_to_leaf, vec![0, 4, 5, 7, 8]);
@@ -837,19 +899,19 @@ pub mod k2_tree {
     fn show_me_the_changes() {
       let mut tree = K2Tree::test_tree();
       println!("{:#?}", tree);
-      tree.set_bit_at(4, 5, false);
+      tree.set(4, 5, false);
       println!("{:#?}", tree);
-      tree.set_bit_at(5, 4, false);
+      tree.set(5, 4, false);
       println!("{:#?}", tree);
-      tree.set_bit_at(0, 4, false);
+      tree.set(0, 4, false);
       println!("{:#?}", tree);
-      tree.set_bit_at(0, 0, true);
+      tree.set(0, 0, true);
       println!("{:#?}", tree);
-      tree.set_bit_at(0, 1, true);
+      tree.set(0, 1, true);
       println!("{:#?}", tree);
-      tree.set_bit_at(7, 7, true);
+      tree.set(7, 7, true);
       println!("{:#?}", tree);
-      tree.set_bit_at(5, 4, true);
+      tree.set(5, 4, true);
       println!("{:#?}", tree);
 
       println!("{}", tree);
