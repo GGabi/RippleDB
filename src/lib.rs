@@ -2,7 +2,8 @@
 
 mod util;
 
-use util::k2_graph::k2_tree::K2Tree as K2Tree;
+pub use util::datastore::graph::Graph as Graph;
+pub use util::datastore::k2_tree as k2_tree;
 
 #[cfg(test)]
 mod tests {

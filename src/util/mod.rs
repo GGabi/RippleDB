@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-pub mod k2_graph;
+pub mod datastore;
 pub mod triplestore;
 
 /* Common Definitions */
