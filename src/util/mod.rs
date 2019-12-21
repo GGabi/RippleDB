@@ -1,28 +1,12 @@
 #![allow(non_snake_case)]
 
 pub mod datastore;
+pub mod rdf;
 pub mod triplestore;
 
 /* Common Definitions */
 
 type Triple = [String; 3];
-
-trait CRUD {
-    type IN;
-    type OUT;
-    type QUERY;
-    /* Required */
-    fn new() -> Self;
-    fn insert(&mut self, val: Self::IN) -> Result<(), ()>;
-    fn remove(&mut self, val: &Self::IN) -> Result<(), ()>;
-    fn get(&self, query: &Self::QUERY) -> Self::OUT;
-    /* Provided */
-    fn replace(&mut self, old: Self::IN, new: Self::IN) -> Result<(), ()> {
-        self.remove(&old)?;
-        self.insert(new)?;
-        Ok(())
-    }
-}
 
 #[derive(Clone)]
 struct Nibble(u8);

@@ -1,8 +1,12 @@
 extern crate bitvec;
+extern crate serde;
 
-use bitvec::{
-  prelude::bitvec,
-  vec::BitVec
+use bitvec::{prelude::bitvec, vec::BitVec};
+use serde::{
+  Serialize,
+  Deserialize,
+  Serializer,
+  ser::SerializeStruct
 };
 
 pub type BitMatrix = Vec<BitVec>;
@@ -16,6 +20,17 @@ pub struct K2Tree {
   stems: BitVec,
   stem_to_leaf: Vec<usize>,
   leaves: BitVec,
+}
+
+impl K2Tree {
+  pub fn heapsize(&self) -> usize {
+    let mut size: usize = std::mem::size_of_val(self);
+    size += std::mem::size_of::<usize>() * self.slayer_starts.len();
+    size += self.stems.len() / 8;
+    size += std::mem::size_of::<usize>() * self.stem_to_leaf.len();
+    size += self.leaves.len() / 8;
+    size
+  }
 }
 
 /* Public */
@@ -47,31 +62,56 @@ impl K2Tree {
     }
   }
   /* Operation */
-  pub fn get(&self, x: usize, y: usize) -> bool {
-    /* Assuming k=2 */
-    if let DescendResult::Leaf(leaf_start, leaf_range) = self.matrix_bit(x, y, self.matrix_width) {
-      if leaf_range[0][1] - leaf_range[0][0] != 1
-      || leaf_range[0][1] - leaf_range[0][0] != 1 {
-        /* ERROR: Final submatrix isn't 2x2 so can't be a leaf */
-      }
-      if x == leaf_range[0][0] {
-        if y == leaf_range[1][0] { return self.leaves[leaf_start] }
-        else { return self.leaves[leaf_start+2] }
-      }
-      else {
-        if y == leaf_range[1][0] { return self.leaves[leaf_start+1] }
-        else { return self.leaves[leaf_start+3] }
-      }
+  pub fn is_empty(&self) -> bool {
+    if ones_in_range(&self.leaves, 0, self.leaves.len()) == 0 {
+      true
     }
     else {
-      /* DescendResult::Stem means no leaf with bit at (x, y) exists,
-            so bit must be 0 */
-      return false
+      false
     }
+  }
+  pub fn get(&self, x: usize, y: usize) -> Result<bool, ()> {
+    if x >= self.matrix_width || y >= self.matrix_width { return Err(()) }
+    /* Assuming k=2 */
+    match self.matrix_bit(x, y, self.matrix_width)? {
+      DescendResult::Leaf(leaf_start, leaf_range) => {
+        if leaf_range[0][1] - leaf_range[0][0] != 1
+        || leaf_range[0][1] - leaf_range[0][0] != 1 {
+          /* ERROR: Final submatrix isn't 2x2 so can't be a leaf */
+        }
+        if x == leaf_range[0][0] {
+          if y == leaf_range[1][0] { Ok(self.leaves[leaf_start]) }
+          else { Ok(self.leaves[leaf_start+2]) }
+        }
+        else {
+          if y == leaf_range[1][0] { Ok(self.leaves[leaf_start+1]) }
+          else { Ok(self.leaves[leaf_start+3]) }
+        }
+      },
+      DescendResult::Stem(_, _) => Ok(false),
+    }
+  }
+  pub fn get_row(&self, y: usize) -> Result<BitVec, ()> {
+    let mut ret_v = BitVec::new();
+    for x in 0..self.matrix_width-1 {
+      ret_v.push(self.get(x, y)?);
+    }
+    Ok(ret_v)
+  }
+  pub fn get_column(&self, x: usize) -> Result<BitVec, ()> {
+    let mut ret_v = BitVec::new();
+    for y in 0..self.matrix_width-1 {
+      ret_v.push(self.get(x, y)?);
+    }
+    Ok(ret_v)
   }
   pub fn set(&mut self, x: usize, y: usize, state: bool) -> Result<(), ()> {
     /* Assuming k=2 */
-    match self.matrix_bit(x, y, self.matrix_width) {
+    // println!("Layer starts: {:?}", self.slayer_starts);
+    // println!("Stem to leaf: {:?}", self.stem_to_leaf);
+    // println!("Tree: {}", self);
+    // println!("Setting bit at: {}, {}", x, y);
+    match self.matrix_bit(x, y, self.matrix_width)? {
       DescendResult::Leaf(leaf_start, leaf_range) => {
         if leaf_range[0][1] - leaf_range[0][0] != 1
         || leaf_range[0][1] - leaf_range[0][0] != 1 {
@@ -188,12 +228,26 @@ impl K2Tree {
             let layer_bit_pos = (stem_start + child_pos) - self.slayer_starts[layer_starts_len-1];
             let mut stem_to_leaf_pos: usize = 0;
             while stem_to_leaf_pos < self.stem_to_leaf.len()
-            && self.stem_to_leaf[stem_to_leaf_pos] < layer_bit_pos {
+            && self.stem_to_leaf[stem_to_leaf_pos] < (layer_bit_pos/4)*4 {
+              //TODO: Clean up and make a note properly explaining why
+              //      we need to times then divide layer_bit_pos by 4
+              //      baso, we want to floor it to the nearest mult of 4
+              //      to get the beginning pos of the block we just
+              //      inserted into last layer of stems.
               stem_to_leaf_pos += 1;
             }
             self.stem_to_leaf.insert(stem_to_leaf_pos, layer_bit_pos);
             /* If stem is fresh, increase bit positions in stem_to_leaf
             after the new elem by 4 to account for the new stem before them */
+            /*
+              NOTE: THERES a fucking problem while updating the stem_to_leaf
+              From what it looks like:
+                When stem bit 1 is mapped to something, but then insert a stem block before
+                it and map new stem bit 3 to a leaf, the algorithm thinks that the new
+                3 is after the old 1, when it isnt anymore, so doesnt update it.
+                <<When inserting a new stem into the final layer, update stem_to_leafs to
+                match it>>
+            */
             if fresh_stem {
               let stem_to_leaf_len = self.stem_to_leaf.len();
               for parent_bit_pos in &mut self.stem_to_leaf[stem_to_leaf_pos+1..stem_to_leaf_len] {
@@ -217,9 +271,8 @@ impl K2Tree {
           }
         }
       }
-      DescendResult::Nothing => return Err(()), //Descend didn't stop at stem or leaf, should be impossible
       _ => {},
-    }
+    };
     Ok(())
   }
   /* Information */
@@ -271,6 +324,11 @@ impl K2Tree {
       /* Insert 1000 to beginning of stems */
       for _ in 0..3 { self.stems.insert(0, false); }
       self.stems.insert(0, true);
+    }
+  }
+  pub fn shrink_if_possible(&mut self) {
+    match self.shrink() {
+      _ => return,
     }
   }
   pub fn shrink(&mut self) -> Result<(), ()> {
@@ -485,13 +543,22 @@ impl std::convert::TryFrom<Vec<Vec<bool>>> for K2Tree {
     )
   }
 }
+impl Serialize for K2Tree {
+  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    let mut state = serializer.serialize_struct("K2Tree", 7)?;
+    state.serialize_field("matrix_width", &self.matrix_width)?;
+    state.serialize_field("k", &self.k)?;
+    state.serialize_field("stems", &self.stems.clone().into_vec())?;
+    state.serialize_field("leaves", &self.leaves.clone().into_vec())?;
+    state.end()
+  }
+}
 
 /* Private */
 type Range = [[usize; 2]; 2];
 enum DescendResult {
   Leaf(usize, Range), //leaf_start, leaf_range
   Stem(usize, Range), //stem_start, stem_range
-  Nothing,
 }
 struct DescendEnv {
   /* Allows for descend to be recursive without parameter hell */
@@ -505,7 +572,7 @@ impl K2Tree {
     ((self.matrix_width as f64).log(self.k as f64) as usize)
     - ((r_width as f64).log(self.k as f64) as usize)
   }
-  fn matrix_bit(&self, x: usize, y: usize, m_width: usize) -> DescendResult {
+  fn matrix_bit(&self, x: usize, y: usize, m_width: usize) -> Result<DescendResult, ()> {
     let env = DescendEnv {
       x: x,
       y: y,
@@ -513,13 +580,13 @@ impl K2Tree {
     };
     self.descend(&env, 0, 0, [[0, m_width-1], [0, m_width-1]])
   }
-  fn descend(&self, env: &DescendEnv, layer: usize, stem_pos: usize, range: Range) -> DescendResult {
+  fn descend(&self, env: &DescendEnv, layer: usize, stem_pos: usize, range: Range) -> Result<DescendResult, ()> {
     let subranges = to_4_subranges(range);
     for (child_pos, child) in self.stems[stem_pos..stem_pos+4].iter().enumerate() {
       if within_range(&subranges[child_pos], env.x, env.y) {
-        if !child { return DescendResult::Stem(stem_pos, range) } //The bit exists within a range that has all zeros
+        if !child { return Ok(DescendResult::Stem(stem_pos, range)) } //The bit exists within a range that has all zeros
         else if layer == env.slayer_max {
-          return DescendResult::Leaf(self.leaf_start(stem_pos + child_pos).unwrap(), subranges[child_pos])
+          return Ok(DescendResult::Leaf(self.leaf_start(stem_pos + child_pos).unwrap(), subranges[child_pos]))
         }
         else {
           return self.descend(env,
@@ -529,7 +596,7 @@ impl K2Tree {
         }
       }
     }
-    DescendResult::Nothing //Should never return this but need to satisfy compiler
+    Err(()) //Should never return this
   }
   fn num_stems_before_child(&self, bit_pos: usize, layer: usize) -> usize {
     let layer_start = self.layer_start(layer);
@@ -551,6 +618,8 @@ impl K2Tree {
   }
   fn leaf_start(&self, stem_bitpos: usize) -> Result<usize, ()> {
     if !self.stems[stem_bitpos] { return Err(()) }
+    // println!("{}", (stem_bitpos - self.slayer_starts[self.slayer_starts.len()-1]));
+    // println!("Tree: {}", self);
     Ok(self.stem_to_leaf
             .iter()
             .position(|&n| n == (stem_bitpos - self.slayer_starts[self.slayer_starts.len()-1]))
@@ -661,8 +730,21 @@ fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
 
 /* Unit Tests */
 #[cfg(test)]
-pub mod unit_tests {
+mod unit_tests {
   use super::*;
+  #[test]
+  fn flood() {
+    let mut tree = K2Tree::new();
+    for _ in 0..3 { tree.grow(); }
+    dbg!(tree.matrix_width());
+    let xs: Vec<usize> = vec![22, 22];
+    let ys: Vec<usize> = vec![33, 22];
+    for x in xs.into_iter() {
+      for y in ys.iter() {
+        tree.set(x, *y, true);
+      }
+    }
+  }
   #[test]
   fn grow_0() {
     let mut tree = K2Tree::new();
@@ -876,5 +958,8 @@ pub mod unit_tests {
     println!("{:#?}", tree);
 
     println!("{}", tree);
+
+    let json = serde_json::to_string(&tree).unwrap();
+    println!("{}", json);
   }
 }
