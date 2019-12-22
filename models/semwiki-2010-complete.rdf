@@ -1,0 +1,1532 @@
+
+<!-- Processed by Id: cwm.py,v 1.197 2007/12/13 15:38:39 syosi Exp -->
+<!--     using base file:///Users/knud/Projekte/dogfood-svn/event-conversions/sem_wiki2010/output-semwiki2010-main-conference-data.rdf-->
+
+
+<rdf:RDF xmlns="http://xmlns.com/foaf/0.1/"
+    xmlns:bibo="http://purl.org/ontology/bibo/"
+    xmlns:dc="http://purl.org/dc/elements/1.1/"
+    xmlns:foaf="http://xmlns.com/foaf/0.1/"
+    xmlns:ical="http://www.w3.org/2002/12/cal/icaltzd#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:swc="http://data.semanticweb.org/ns/swc/ontology#"
+    xmlns:swrc="http://swrc.ontoware.org/ontology#">
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/aalborg-university">
+        <rdfs:label>University of Aalborg</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/fred-durao"/>
+        <name>University of Aalborg</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/agh-university-krakow">
+        <rdfs:label>AGH University Krakow</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/grzegorz-j-nalepa"/>
+        <name>AGH University Krakow</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/bundeswehr-university-munich-germany">
+        <rdfs:label>UniBW München</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/martin-hepp"/>
+        <name>UniBW München</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/carnegie-mellon-university">
+        <rdfs:label>Carnegie Mellon University</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/claudia-mueller-birn"/>
+        <name>Carnegie Mellon University</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/cnrs">
+        <rdfs:label>CNRS</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/amedeo-napoli"/>
+        <name>CNRS</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/deri-nui-galway">
+        <rdfs:label>DERI</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/alexandre-passant"/>
+        <member rdf:resource="http://data.semanticweb.org/person/siegfried-handschuh"/>
+        <member rdf:resource="http://data.semanticweb.org/person/tudor-groza"/>
+        <name>DERI</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/deri-universitaet-innsbruck">
+        <rdfs:label>STI Innsbruck</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/katharina-siorpaes"/>
+        <name>STI Innsbruck</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/european-regiowiki-society">
+        <rdfs:label>European Regiowiki Society</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/friedel-voelker"/>
+        <name>European Regiowiki Society</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/fraunhofer-iese">
+        <rdfs:label>Fraunhofer IESE</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/bjoern-decker"/>
+        <name>Fraunhofer IESE</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/fzi-forschungszentrum-informatik">
+        <rdfs:label>FZI Karlsruhe</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/max-voelkel"/>
+        <name>FZI Karlsruhe</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/german-research-center-for-artificial-intelligence-dfki">
+        <rdfs:label>DFKI</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/malte-kiesel"/>
+        <name>DFKI</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/inria-edelweiss">
+        <rdfs:label>INRIA - Edelweiss</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/fabien-gandon"/>
+        <name>INRIA - Edelweiss</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/inria-rhone-alpes">
+        <rdfs:label>INRIA</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/pascal-molli"/>
+        <name>INRIA</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/inria-score">
+        <rdfs:label>INRIA SCORE</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/hala-skaf-molli"/>
+        <name>INRIA SCORE</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/jacobs-university-bremen">
+        <rdfs:label>Jacobs University Bremen</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/christine-mueller"/>
+        <member rdf:resource="http://data.semanticweb.org/person/christoph-lange"/>
+        <name>Jacobs University Bremen</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/karlsruhe-institute-of-technology">
+        <rdfs:label>Karlsruhe Institute of Technology</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/elena-paslaru-bontas-simperl"/>
+        <member rdf:resource="http://data.semanticweb.org/person/markus-kroetzsch"/>
+        <name>Karlsruhe Institute of Technology</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/know-center">
+        <rdfs:label>Know-Center Graz</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/stefanie-lindstaedt"/>
+        <member rdf:resource="http://data.semanticweb.org/person/viktoria-pammer"/>
+        <name>Know-Center Graz</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/la-plata-university">
+        <rdfs:label>La Plata University</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/alicia-diaz"/>
+        <name>La Plata University</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/liris-universite-de-lyon">
+        <rdfs:label>LIRIS, Université de Lyon</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/amelie-cordier"/>
+        <name>LIRIS, Université de Lyon</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/loria">
+        <rdfs:label>LORIA</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/amedeo-napoli"/>
+        <name>LORIA</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/mayo-clinic">
+        <rdfs:label>Mayo Clinic</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/guoqian-jiang"/>
+        <member rdf:resource="http://data.semanticweb.org/person/harold-r-solbrig"/>
+        <name>Mayo Clinic</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/nancy-university">
+        <rdfs:label>Nancy University</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/pascal-molli"/>
+        <name>Nancy University</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/ontoprise-gmbh">
+        <rdfs:label>Ontoprise</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/michael-erdmann"/>
+        <name>Ontoprise</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/radboud-university-nijmegen">
+        <rdfs:label>Radboud University Nijmegen</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/herman-geuvers"/>
+        <name>Radboud University Nijmegen</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/salzburg-research">
+        <rdfs:label>Salzburg Research</rdfs:label>
+        <rdfs:label>Salzburg Research, Knowledge and Media Technologies (KMT), Salzburg</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/rolf-sint"/>
+        <member rdf:resource="http://data.semanticweb.org/person/sebastian-schaffert"/>
+        <member rdf:resource="http://data.semanticweb.org/person/stephanie-stroka"/>
+        <member rdf:resource="http://data.semanticweb.org/person/thomas-kurz"/>
+        <member rdf:resource="http://data.semanticweb.org/person/tobias-buerger"/>
+        <name>Salzburg Research</name>
+        <name>Salzburg Research, Knowledge and Media Technologies (KMT), Salzburg</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/semantic-web-company">
+        <rdfs:label>Semantic Web Company</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/matthias-samwald"/>
+        <name>Semantic Web Company</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/technical-university-of-brno">
+        <rdfs:label>Technical University of Brno</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/marek-schmidt"/>
+        <name>Technical University of Brno</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/thales">
+        <rdfs:label>Thales</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/jean-rohmer"/>
+        <name>Thales</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/universitaet-leipzig">
+        <rdfs:label>Universität Leipzig</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/david-aumueller"/>
+        <member rdf:resource="http://data.semanticweb.org/person/sebastian-tramp"/>
+        <member rdf:resource="http://data.semanticweb.org/person/soeren-auer"/>
+        <name>Universität Leipzig</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/universitaet-wuerzburg">
+        <rdfs:label>University of Würzburg</rdfs:label>
+        <rdfs:label>Universität Würzburg</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/joachim-baumeister"/>
+        <member rdf:resource="http://data.semanticweb.org/person/jochen-reutelshoefer"/>
+        <name>University of Würzburg</name>
+        <name>Universität Würzburg</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/university-of-munich">
+        <rdfs:label>University of Munich</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/jakub-kotowski"/>
+        <member rdf:resource="http://data.semanticweb.org/person/klara-weiand"/>
+        <name>University of Munich</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/university-of-nancy">
+        <rdfs:label>University of Nancy</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/hala-skaf-molli"/>
+        <name>University of Nancy</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/university-of-rio-de-janeiro">
+        <rdfs:label>University of Rio de Janeiro</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/daniel-schwabe"/>
+        <name>University of Rio de Janeiro</name>
+    </Organization>
+
+    <Organization rdf:about="http://data.semanticweb.org/organization/university-of-zurich">
+        <rdfs:label>Universität Zürich</rdfs:label>
+        <member rdf:resource="http://data.semanticweb.org/person/tobias-kuhn"/>
+        <name>Universität Zürich</name>
+    </Organization>
+
+    <Person rdf:about="http://data.semanticweb.org/person/alasdair-j-g-gray">
+        <rdfs:label>Alasdair Gray</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/6"/>
+        <name>Alasdair Gray</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/alejandro-fernandez">
+        <rdfs:label>Alejandro Fernández</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/8"/>
+        <name>Alejandro Fernández</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/alexander-haas">
+        <rdfs:label>Alexander Haas</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/16"/>
+        <name>Alexander Haas</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/alexandre-blansche">
+        <rdfs:label>Alexandre Blansché</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/12"/>
+        <name>Alexandre Blansché</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/alexandre-passant">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/deri-nui-galway"/>
+        <rdfs:label>Alexandre Passant</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Ireland"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/20"/>
+        <name>Alexandre Passant</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/alicia-diaz">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/la-plata-university"/>
+        <rdfs:label>Alicia Díaz</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Argentina"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/8"/>
+        <name>Alicia Díaz</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/amedeo-napoli">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/cnrs"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/loria"/>
+        <rdfs:label>Amedeo Napoli</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/France"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/12"/>
+        <name>Amedeo Napoli</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/amelie-cordier">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/liris-universite-de-lyon"/>
+        <rdfs:label>Amélie Cordier</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/France"/>
+        <name>Amélie Cordier</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/anca-dumitrache">
+        <rdfs:label>Anca Dumitrache</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/14"/>
+        <name>Anca Dumitrache</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/anton-koestlbacher">
+        <rdfs:label>Anton Köstlbacher</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/16"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/18"/>
+        <name>Anton Köstlbacher</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/antoni-hermoso-pulido">
+        <rdfs:label>Antoni Hermoso Pulido</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/13"/>
+        <name>Antoni Hermoso Pulido</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/bjoern-decker">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/fraunhofer-iese"/>
+        <rdfs:label>Björn Decker</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <name>Björn Decker</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/christian-wolff">
+        <rdfs:label>Christian Wolff</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/18"/>
+        <name>Christian Wolff</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/christine-mueller">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/jacobs-university-bremen"/>
+        <rdfs:label>Christine Müller</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <name>Christine Müller</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/christoph-hiemke">
+        <rdfs:label>Christoph Hiemke</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/16"/>
+        <name>Christoph Hiemke</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/christoph-lange">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/organising-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/jacobs-university-bremen"/>
+        <rdfs:label>Christoph Lange</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/14"/>
+        <name>Christoph Lange</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/claudia-lopez">
+        <rdfs:label>Claudia Lopez</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/22"/>
+        <name>Claudia Lopez</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/claudia-mueller-birn">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/carnegie-mellon-university"/>
+        <rdfs:label>Claudia Müller-Birn</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/United_States"/>
+        <name>Claudia Müller-Birn</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/daniel-schwabe">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/university-of-rio-de-janeiro"/>
+        <rdfs:label>Daniel Schwabe</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Brazil"/>
+        <name>Daniel Schwabe</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/david-aumueller">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/universitaet-leipzig"/>
+        <rdfs:label>David Aumüller</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <name>David Aumüller</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/denny-vrandecic">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/keynote/limitsOFSemanticWikis/keynote-presenter"/>
+        <rdfs:label>Denny Vrandecic</rdfs:label>
+        <name>Denny Vrandecic</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/ekkehard-haen">
+        <rdfs:label>Ekkehard Haen</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/16"/>
+        <name>Ekkehard Haen</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/elena-paslaru-bontas-simperl">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/karlsruhe-institute-of-technology"/>
+        <rdfs:label>Elena Simperl</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <name>Elena Simperl</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/eric-leclercq">
+        <rdfs:label>Eric Leclercq</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/3"/>
+        <name>Eric Leclercq</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/fabian-kneissl">
+        <rdfs:label>Fabian Kneissl</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/5"/>
+        <name>Fabian Kneissl</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/fabien-gandon">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/inria-edelweiss"/>
+        <rdfs:label>Fabien Gandon</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/France"/>
+        <name>Fabien Gandon</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/francois-bry">
+        <rdfs:label>François Bry</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/4"/>
+        <name>François Bry</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/frank-puppe">
+        <rdfs:label>Frank Puppe</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/19"/>
+        <name>Frank Puppe</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/fred-durao">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/aalborg-university"/>
+        <rdfs:label>Fred Durão</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <name>Fred Durão</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/friedel-voelker">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/european-regiowiki-society"/>
+        <rdfs:label>Friedel Völker</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <name>Friedel Völker</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/gerome-canals">
+        <rdfs:label>Gérôme Canals</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/21"/>
+        <name>Gérôme Canals</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/grzegorz-j-nalepa">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/agh-university-krakow"/>
+        <rdfs:label>Grzegorz J. Nalepa</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Poland"/>
+        <name>Grzegorz J. Nalepa</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/guglielmo-roma">
+        <rdfs:label>Guglielmo Roma</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/13"/>
+        <name>Guglielmo Roma</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/guoqian-jiang">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/mayo-clinic"/>
+        <rdfs:label>Guoqian Jiang</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/United_States"/>
+        <name>Guoqian Jiang</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/hala-skaf-molli">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/organising-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/inria-score"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/university-of-nancy"/>
+        <rdfs:label>Hala Skaf-Molli</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/France"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/12"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/21"/>
+        <name>Hala Skaf-Molli</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/hammou-fadili">
+        <rdfs:label>Hammou Fadili</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/15"/>
+        <name>Hammou Fadili</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/harold-r-solbrig">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/mayo-clinic"/>
+        <rdfs:label>Harold Solbrig</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/United_States"/>
+        <name>Harold Solbrig</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/herman-geuvers">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/radboud-university-nijmegen"/>
+        <rdfs:label>Herman Geuvers</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Netherlands"/>
+        <name>Herman Geuvers</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/hernan-astudillo">
+        <rdfs:label>Hernan Astudillo</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/22"/>
+        <name>Hernan Astudillo</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/iadh-ounis">
+        <rdfs:label>Iadh Ounis</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/6"/>
+        <name>Iadh Ounis</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/ian-dunwell">
+        <rdfs:label>Ian Dunwell</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/10"/>
+        <name>Ian Dunwell</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/ilham-nadira-lammari">
+        <rdfs:label>Ilham Nadira Lammari</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/15"/>
+        <name>Ilham Nadira Lammari</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/jacky-akoka">
+        <rdfs:label>Jacky Akoka</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/15"/>
+        <name>Jacky Akoka</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/jakub-kotowski">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/university-of-munich"/>
+        <rdfs:label>Jakub Kotowski</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/4"/>
+        <name>Jakub Kotowski</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/jean-rohmer">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/thales"/>
+        <rdfs:label>Jean Rohmer</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/France"/>
+        <name>Jean Rohmer</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/joachim-baumeister">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/universitaet-wuerzburg"/>
+        <rdfs:label>Joachim Baumeister</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/19"/>
+        <name>Joachim Baumeister</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/joaquin-j-molina-castro">
+        <rdfs:label>Joaquín J. Molina-Castro</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/11"/>
+        <name>Joaquín J. Molina-Castro</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/jochen-reutelshoefer">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/organising-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/universitaet-wuerzburg"/>
+        <rdfs:label>Jochen Reutelshoefer</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/19"/>
+        <mbox_sha1sum>3558db59d8c7016b6c6a4686bfa21b249eb096bc</mbox_sha1sum>
+        <name>Jochen Reutelshoefer</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/jodi-schneider">
+        <rdfs:label>Jodi Schneider</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/20"/>
+        <name>Jodi Schneider</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/john-breslin">
+        <rdfs:label>John Breslin</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/20"/>
+        <name>John Breslin</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/jonas-maurus">
+        <rdfs:label>Jonas Maurus</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/16"/>
+        <name>Jonas Maurus</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/jose-f-aldana-montes">
+        <rdfs:label>José F. Aldana-Montes</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/11"/>
+        <name>José F. Aldana-Montes</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/katharina-siorpaes">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/deri-universitaet-innsbruck"/>
+        <rdfs:label>Katharina Siorpaes</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Austria"/>
+        <name>Katharina Siorpaes</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/khelifa-lydia">
+        <rdfs:label>Khelifa Lydia</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/15"/>
+        <name>Khelifa Lydia</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/klara-weiand">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/university-of-munich"/>
+        <rdfs:label>Klara Weiand</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/5"/>
+        <name>Klara Weiand</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/malte-kiesel">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/german-research-center-for-artificial-intelligence-dfki"/>
+        <rdfs:label>Malte Kiesel</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <name>Malte Kiesel</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/manfred-schied">
+        <rdfs:label>Manfred Schied</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/18"/>
+        <name>Manfred Schied</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/manuela-ruiz-montiel">
+        <rdfs:label>Manuela Ruiz-Montiel</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/11"/>
+        <name>Manuela Ruiz-Montiel</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/marek-schmidt">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/technical-university-of-brno"/>
+        <rdfs:label>Marek Schmidt</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Czech_Republic"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/7"/>
+        <name>Marek Schmidt</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/marinette-savonnet">
+        <rdfs:label>Marinette Savonnet</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/3"/>
+        <name>Marinette Savonnet</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/mark-markus">
+        <rdfs:label>Mark Markus</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/17"/>
+        <name>Mark Markus</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/markus-kroetzsch">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/karlsruhe-institute-of-technology"/>
+        <rdfs:label>Markus Krötzsch</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <name>Markus Krötzsch</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/martin-hepp">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/bundeswehr-university-munich-germany"/>
+        <rdfs:label>Martin Hepp</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <name>Martin Hepp</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/martin-rosenfeld">
+        <rdfs:label>Martin Rosenfeld</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/8"/>
+        <name>Martin Rosenfeld</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/matthias-samwald">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/semantic-web-company"/>
+        <rdfs:label>Matthias Samwald</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Austria"/>
+        <name>Matthias Samwald</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/max-voelkel">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/fzi-forschungszentrum-informatik"/>
+        <rdfs:label>Max Völkel</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <name>Max Völkel</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/michael-erdmann">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/ontoprise-gmbh"/>
+        <rdfs:label>Michael Erdmann</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <name>Michael Erdmann</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/michael-kohlhase">
+        <rdfs:label>Michael Kohlhase</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/14"/>
+        <name>Michael Kohlhase</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/michela-bertero">
+        <rdfs:label>Michela Bertero</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/13"/>
+        <name>Michela Bertero</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/miriam-alloza">
+        <rdfs:label>Miriam Alloza</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/13"/>
+        <name>Miriam Alloza</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/nils-aschenbeck">
+        <rdfs:label>Nils Aschenbeck</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/14"/>
+        <name>Nils Aschenbeck</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/norman-gray">
+        <rdfs:label>Norman Gray</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/6"/>
+        <name>Norman Gray</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/pascal-molli">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/inria-rhone-alpes"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/nancy-university"/>
+        <rdfs:label>Pascal Molli</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/France"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/12"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/21"/>
+        <name>Pascal Molli</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/pavel-smrz">
+        <rdfs:label>Pavel Smrž</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/7"/>
+        <name>Pavel Smrž</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/rainer-hammwoehner">
+        <rdfs:label>Rainer Hammwöhner</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/16"/>
+        <name>Rainer Hammwöhner</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/rolf-sint">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/salzburg-research"/>
+        <rdfs:label>Rolf Sint</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Austria"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/17"/>
+        <name>Rolf Sint</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/sebastian-schaffert">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/organising-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/salzburg-research"/>
+        <rdfs:label>Sebastian Schaffert</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Austria"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/17"/>
+        <name>Sebastian Schaffert</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/sebastian-tramp">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/universitaet-leipzig"/>
+        <rdfs:label>Sebastian Tramp</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <name>Sebastian Tramp</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/siegfried-handschuh">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/deri-nui-galway"/>
+        <rdfs:label>Siegfried Handschuh</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Ireland"/>
+        <name>Siegfried Handschuh</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/silvia-speroni">
+        <rdfs:label>Silvia Speroni</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/13"/>
+        <name>Silvia Speroni</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/soeren-auer">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/universitaet-leipzig"/>
+        <rdfs:label>Sören Auer</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Germany"/>
+        <name>Sören Auer</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/stefanie-lindstaedt">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/know-center"/>
+        <rdfs:label>Stefanie Lindstaedt</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Austria"/>
+        <name>Stefanie Lindstaedt</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/stephanie-stroka">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/salzburg-research"/>
+        <rdfs:label>Stephanie Stroka</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Austria"/>
+        <name>Stephanie Stroka</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/stuart-chalmers">
+        <rdfs:label>Stuart Chalmers</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/6"/>
+        <name>Stuart Chalmers</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/thomas-kurz">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/salzburg-research"/>
+        <rdfs:label>Thomas Kurz</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Austria"/>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/17"/>
+        <name>Thomas Kurz</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/tobias-buerger">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/salzburg-research"/>
+        <rdfs:label>Tobias Bürger</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Austria"/>
+        <name>Tobias Bürger</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/tobias-kuhn">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/university-of-zurich"/>
+        <rdfs:label>Tobias Kuhn</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Switzerland"/>
+        <name>Tobias Kuhn</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/tudor-groza">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/deri-nui-galway"/>
+        <rdfs:label>Tudor Groza</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Ireland"/>
+        <name>Tudor Groza</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/victor-codocedo">
+        <rdfs:label>Víctor Codocedo</rdfs:label>
+        <made rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/22"/>
+        <name>Víctor Codocedo</name>
+    </Person>
+
+    <Person rdf:about="http://data.semanticweb.org/person/viktoria-pammer">
+        <swc:holdsRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swrc:affiliation rdf:resource="http://data.semanticweb.org/organization/know-center"/>
+        <rdfs:label>Viktoria Pammer</rdfs:label>
+        <based_near rdf:resource="http://dbpedia.org/resource/Austria"/>
+        <name>Viktoria Pammer</name>
+    </Person>
+
+    <swc:WorkshopEvent rdf:about="http://data.semanticweb.org/workshop/semwiki/2010">
+        <swc:completeGraph rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/complete"/>
+        <swc:hasAcronym>SemWiki2010</swc:hasAcronym>
+        <swc:hasRelatedDocument rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <swc:hasRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/organising-committee-member"/>
+        <swc:hasRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member"/>
+        <swc:isSuperEventOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/keynote/limitsOFSemanticWikis"/>
+        <rdfs:label>5th Workshop on Semantic Wikis</rdfs:label>
+        <ical:dtend>2010-05-31</ical:dtend>
+        <ical:dtstart>2010-05-31</ical:dtstart>
+        <ical:url rdf:resource="http://www.semwiki.org/semwiki2010/"/>
+        <homepage rdf:resource="http://www.semwiki.org/semwiki2010/"/>
+    </swc:WorkshopEvent>
+
+    <swc:KeynoteTalk rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/keynote/limitsOFSemanticWikis">
+        <swc:hasRole rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/keynote/limitsOFSemanticWikis/keynote-presenter"/>
+        <swc:isSubEventOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010"/>
+        <rdfs:label>The limits of Semantic Wikis - and beyond</rdfs:label>
+        <ical:dtend>2010-05-31T11:45:00+02:00</ical:dtend>
+        <ical:dtstart>2010-05-31T11:00:00+02:00</ical:dtstart>
+        <ical:summary>The limits of Semantic Wikis - and beyond</ical:summary>
+    </swc:KeynoteTalk>
+
+    <swc:Presenter rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/keynote/limitsOFSemanticWikis/keynote-presenter">
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/denny-vrandecic"/>
+        <swc:isRoleAt rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/keynote/limitsOFSemanticWikis"/>
+        <rdfs:label>Keynote Presenter</rdfs:label>
+    </swc:Presenter>
+
+    <swc:Chair rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/organising-committee-member">
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/christoph-lange"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/hala-skaf-molli"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/jochen-reutelshoefer"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/sebastian-schaffert"/>
+        <swc:isRoleAt rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010"/>
+        <rdfs:label>Organising Committee Member</rdfs:label>
+    </swc:Chair>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/10">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/ian-dunwell"/>
+        <dc:subject>semantic web applications</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:subject>virtual learning environments</dc:subject>
+        <dc:title>Automating Content Generation for Large-scale Virtual Learning Environments using Semantic Web Services</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/10/authorlist"/>
+        <swrc:abstract>The integration of semantic web services with three-dimensional virtual worlds offers many potential avenues for the creation of dynamic, content-rich environments which can be used to entertain, educate, and inform. One such avenue is the fusion of the large volumes of data from Wiki-based sources with virtual representations of historic locations, using semantics to filter and present data to users in effective and personalisable ways. This paper explores the potential for such integration, addressing challenges ranging from accurately transposing virtual world locales to semantically-linked real world data, to integrating diverse ranges of semantic information sources in a user-centric and seamless fashion. A demonstrated proof-of-concept, using the Rome Reborn model, shows several advantages that can be gained through the use of existing Wiki and semantic web services to rapidly and automatically annotate 3D content, as well as demonstrating the increasing need for Wiki content to be represented in a semantically-rich form. Such an approach has applications in a range of different contexts, including education, training, and cultural heritage.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper10.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>Automating Content Generation for Large-scale Virtual Learning Environments using Semantic Web Services</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/ian-dunwell"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/10/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/ian-dunwell"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/11">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/joaquin-j-molina-castro"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/jose-f-aldana-montes"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/manuela-ruiz-montiel"/>
+        <dc:subject>ontologies</dc:subject>
+        <dc:subject>recommender systems</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:title>TasTicWiki: A Semantic Wiki with Content Recommendation</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/11/authorlist"/>
+        <swrc:abstract>Wikis are a great tool inside the Social Web, as they provide the chance of creating collaborative knowledge in a quick way. Semantic wikis are becoming popular as web technologies evolve: ontologies and semantic markup in the web allow the generation of machine-readable information. Semantic wikis are often seen as small semantic webs as they provide support for enhanced navigation and searching of their contents, just what the standards of the Semantic Web aim to offer. Moreover, the great amount of information normally present inside wikis, or any web page, creates the necessity of some kind of filtering or personalized recommendation in order to lighten the search of interesting items. We have developed TasTicWiki, a novel semantic wiki engine which takes advantage of semantic information in order, not only to enhance navigation and searching, but also to provide recommendation services.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper11.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>TasTicWiki: A Semantic Wiki with Content Recommendation</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/joaquin-j-molina-castro"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/jose-f-aldana-montes"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/manuela-ruiz-montiel"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/11/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/manuela-ruiz-montiel"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/joaquin-j-molina-castro"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/jose-f-aldana-montes"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/12">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/alexandre-blansche"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/amedeo-napoli"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/hala-skaf-molli"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/pascal-molli"/>
+        <dc:subject>Formal Concept Analysis</dc:subject>
+        <dc:subject>Human-Machine Collaboration</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:title>Human-machine Collaboration for Enriching Semantic Wikis using Formal Concept Analysis</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/12/authorlist"/>
+        <swrc:abstract>Semantic wikis are new generation of collaborative tools. They allow to embed semantic annotations in the wiki content. These annotations allow to better organize and structure the wiki contents. It is then possible for users to build knowledge understandable by humans and computers. By this way, machines are allowed to produce or update semantic wiki pages as humans can do. In this paper, we propose a new smart agent based on Formal Concept Analysis. This smart agent can compute automatically category trees based on defined semantic properties. In order to reduce human-machine collaboration problems, humans just validate changes proposed by the smart agent. A distributed version of wiki is used to ensure consistency of the content during the validation process.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper12.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>Human-machine Collaboration for Enriching Semantic Wikis using Formal Concept Analysis</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/alexandre-blansche"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/amedeo-napoli"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/hala-skaf-molli"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/pascal-molli"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/12/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/alexandre-blansche"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/hala-skaf-molli"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/pascal-molli"/>
+        <rdf:_4 rdf:resource="http://data.semanticweb.org/person/amedeo-napoli"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/13">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/antoni-hermoso-pulido"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/guglielmo-roma"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/michela-bertero"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/miriam-alloza"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/silvia-speroni"/>
+        <dc:subject>laboratory</dc:subject>
+        <dc:subject>protein</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:subject>semantics</dc:subject>
+        <dc:subject>wiki</dc:subject>
+        <dc:subject>workflow</dc:subject>
+        <dc:title>Lab Service Wiki: a wiki-based data management solution for protein production service</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/13/authorlist"/>
+        <swrc:abstract>Lab Service Wiki is a Semantic MediaWiki implementation for the management of a production laboratory. Here we describe its implementation on a protein service lab. Users of the service enter information about a sample and the desired analysis to be performed by using a semantic-enabled form built on top of a wiki page. After submitting, a workflow is created, and the manager of the service can assign different experimental tasks to the lab operators. The final output is the generation of a report for the requester. Users and operators, according to their profile and granted permissions, can track the state of the requests and the associated experiments at any time. People interested in this implementation can access it at: http://labservice.biocore.crg.cat</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper13.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>Lab Service Wiki: a wiki-based data management solution for protein production service</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/antoni-hermoso-pulido"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/guglielmo-roma"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/michela-bertero"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/miriam-alloza"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/silvia-speroni"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/13/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/antoni-hermoso-pulido"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/michela-bertero"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/silvia-speroni"/>
+        <rdf:_4 rdf:resource="http://data.semanticweb.org/person/miriam-alloza"/>
+        <rdf:_5 rdf:resource="http://data.semanticweb.org/person/guglielmo-roma"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/14">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/anca-dumitrache"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/christoph-lange"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/michael-kohlhase"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/nils-aschenbeck"/>
+        <dc:subject>Semantic MediaWiki</dc:subject>
+        <dc:subject>cultural heritage</dc:subject>
+        <dc:subject>portal</dc:subject>
+        <dc:subject>prototyping</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:title>Prototyping a Browser for a Listed Buildings Database with Semantic MediaWiki</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/14/authorlist"/>
+        <swrc:abstract>Listed buildings, even if they are not top landmarks, are increasingly attracting visitors. People express interest in hidden gems in their neighborhood or along their travel itinerary, and in the history of the building they live in. All required data has been meticulously collected by the offices for historical monuments but is not flexibly accessible. In Bremen, the database of buildings (with location, map of the estate, construction history, architect, photos) is searchable and browsable online3, but that only helps users who know how to use a rigidly structured database search form. Our beginning BauDenkMalNetz effort (“listed building web”) aims at a wider purpose: modeling the semantic structure of these data, starting in Bremen but open for other data, and exposing them via a semantic web interface with enhanced querying and presentation capabilities. Requirements beyond interactive browsing comprise auto-generation of customized printed guides (e. g. “Bauhaus villas in my neighborhood”), on-demand presentation on mobile devices (e. g. “medieval churches along my travel itinerary”), and serving linked data for usage by other services.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper14.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>Prototyping a Browser for a Listed Buildings Database with Semantic MediaWiki</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/anca-dumitrache"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/christoph-lange"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/michael-kohlhase"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/nils-aschenbeck"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/14/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/anca-dumitrache"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/christoph-lange"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/michael-kohlhase"/>
+        <rdf:_4 rdf:resource="http://data.semanticweb.org/person/nils-aschenbeck"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/15">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/hammou-fadili"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/ilham-nadira-lammari"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/jacky-akoka"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/khelifa-lydia"/>
+        <dc:subject>Human and Social Sciences</dc:subject>
+        <dc:subject>Multicultural Wiktionary</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:title>A Wiki-Oriented On-line Dictionary for Human and Social Sciences</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/15/authorlist"/>
+        <swrc:abstract>The aim of this paper is to contribute to the construction of a human and social sciences on-line dictionary. The latter is Wiki-oriented. It takes into account the multicultural aspect of the HSS (human and social sciences) as well as the ISO 1951 standard. It allows HSS researchers to exchange and to share their knowledge regardless of their geographical locations of work and/or of residence. After the conceptual description of this dictionary and the presentation of the mapping rules to Wiki semantic concepts, the paper will present an overview of the prototype that has been developed.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper15.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>A Wiki-Oriented On-line Dictionary for Human and Social Sciences</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/hammou-fadili"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/ilham-nadira-lammari"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/jacky-akoka"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/khelifa-lydia"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/15/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/khelifa-lydia"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/ilham-nadira-lammari"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/hammou-fadili"/>
+        <rdf:_4 rdf:resource="http://data.semanticweb.org/person/jacky-akoka"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/16">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/alexander-haas"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/anton-koestlbacher"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/christoph-hiemke"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/ekkehard-haen"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/jonas-maurus"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/rainer-hammwoehner"/>
+        <dc:subject>data conversion</dc:subject>
+        <dc:subject>drug database</dc:subject>
+        <dc:subject>medical information system</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:title>OpenDrugWiki – Using a Semantic Wiki for Consolidating, Editing and Reviewing of Existing Heterogeneous Drug Data</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/16/authorlist"/>
+        <swrc:abstract>The ongoing project which is described in this article pursues the integration and consolidation of drug data available in different Microsoft Office documents and existing information systems. An initial import of unstructured data out of five heterogeneous sources into a semantic wiki was performed using custom import scripts. Using Semantic MediaWiki and the Semantic Forms extension, we created a convenient wiki-based system for editing the merged data in one central application. Revised and reviewed data is exported back into production systems on a regular basis.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper16.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>OpenDrugWiki – Using a Semantic Wiki for Consolidating, Editing and Reviewing of Existing Heterogeneous Drug Data</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/alexander-haas"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/anton-koestlbacher"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/christoph-hiemke"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/ekkehard-haen"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/jonas-maurus"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/rainer-hammwoehner"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/16/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/anton-koestlbacher"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/jonas-maurus"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/rainer-hammwoehner"/>
+        <rdf:_4 rdf:resource="http://data.semanticweb.org/person/alexander-haas"/>
+        <rdf:_5 rdf:resource="http://data.semanticweb.org/person/ekkehard-haen"/>
+        <rdf:_6 rdf:resource="http://data.semanticweb.org/person/christoph-hiemke"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/17">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/mark-markus"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/rolf-sint"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/sebastian-schaffert"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/thomas-kurz"/>
+        <dc:subject>idea management</dc:subject>
+        <dc:subject>innovation management</dc:subject>
+        <dc:subject>kiwi</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:subject>social software</dc:subject>
+        <dc:title>Ideator - a collaborative enterprise idea management tool powered by KiWi</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/17/authorlist"/>
+        <swrc:abstract>The most difficult thing with ideas is not to have them. It's to find out if they're good. This position paper demonstrates the requirements for an idea management application and presents the idea management tool “Ideator”. The Ideator is a software tool which is currently under development and which offers innovative and flexible solutions to idea management in company environments. It is based on the semantic wiki KiWi that is a framework for semantic social software applications. We present several functionalities of the Ideator and show which modifications and extensions of KiWi are necessary for their realisation.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper17.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>Ideator - a collaborative enterprise idea management tool powered by KiWi</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/mark-markus"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/rolf-sint"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/sebastian-schaffert"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/thomas-kurz"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/17/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/rolf-sint"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/mark-markus"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/sebastian-schaffert"/>
+        <rdf:_4 rdf:resource="http://data.semanticweb.org/person/thomas-kurz"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/18">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/anton-koestlbacher"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/christian-wolff"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/manfred-schied"/>
+        <dc:subject>rdf2go</dc:subject>
+        <dc:subject>semantic mediawiki</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:subject>triple store connector</dc:subject>
+        <dc:title>Connecting Semantic Mediawiki to different Triple Stores Using RDF2Go</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/18/authorlist"/>
+        <swrc:abstract>This article describes a generic triple store connector for the popular Semantic MediaWiki software to be used with different triple stores like Jena or Sesame. Using RDF2Go as an abstraction layer it is possible to easily exchange triple stores. This ongoing work is part of the opendrugwiki project, a semantic wiki for distributed pharmaceutical research groups.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper18.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>Connecting Semantic Mediawiki to different Triple Stores Using RDF2Go</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/anton-koestlbacher"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/christian-wolff"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/manfred-schied"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/18/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/manfred-schied"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/anton-koestlbacher"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/christian-wolff"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/19">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/frank-puppe"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/joachim-baumeister"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/jochen-reutelshoefer"/>
+        <dc:subject>decision-support systems</dc:subject>
+        <dc:subject>meta engineering</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:title>Towards Meta-Engineering for Semantic Wikis</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/19/authorlist"/>
+        <swrc:abstract>Building intelligent systems is a complex task.  In many knowledge engineering projects the knowledge acquisition activities can significantly benefit from a tool, that is tailored to the specific project setting with respect to domain, contributors, and goals.  Specifying and building a new tool from scratch is ambitious, tedious, and delaying.  In this paper we introduce a wiki-based meta-engineering approach allowing for the smooth beginning of the knowledge acquisition activities going along with tool specification and tailored implementation. Meta-engineering proposes that in a wiki-based knowledge engineering project not only the content (the knowledge base) should be developed in evolutionary manner but also the tool itself.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper19.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>Towards Meta-Engineering for Semantic Wikis</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/frank-puppe"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/joachim-baumeister"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/jochen-reutelshoefer"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/19/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/jochen-reutelshoefer"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/joachim-baumeister"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/frank-puppe"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/20">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/alexandre-passant"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/jodi-schneider"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/john-breslin"/>
+        <dc:subject>MediaWiki</dc:subject>
+        <dc:subject>RDFa</dc:subject>
+        <dc:subject>SIOC</dc:subject>
+        <dc:subject>Talk pages</dc:subject>
+        <dc:subject>ontologies</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:title>Enhancing MediaWiki Talk pages with Semantics for Better Coordination - A Proposal</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/20/authorlist"/>
+        <swrc:abstract>We present a 15-item classification for MediaWiki Talk pages comments, and use this classification to describe a new lightweight ontology extending SIOC. We use this ontology to enhance MediaWiki Talk pages with RDFa.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper20.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>Enhancing MediaWiki Talk pages with Semantics for Better Coordination - A Proposal</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/alexandre-passant"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/jodi-schneider"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/john-breslin"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/20/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/jodi-schneider"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/alexandre-passant"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/john-breslin"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/21">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/gerome-canals"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/hala-skaf-molli"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/pascal-molli"/>
+        <dc:subject>Distributed</dc:subject>
+        <dc:subject>Semantic MediaWiki</dc:subject>
+        <dc:subject>consistency</dc:subject>
+        <dc:subject>replication</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:title>DSMW: Distributed Semantic MediaWiki</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/21/authorlist"/>
+        <swrc:abstract>DSMW is an extension to Semantic Mediawiki (SMW), it allows to create a network of SMW servers that share common semantic wiki pages. DSMW users can create communication channels between servers and use a publish-subscribe approach to manage the change propagation. DSMW synchronizes concurrent updates of shared semantic pages to ensure their consistency. It oers new collaboration modes to semantic wiki users and supports data ow-oriented processes.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper21.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>DSMW: Distributed Semantic MediaWiki</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/gerome-canals"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/hala-skaf-molli"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/pascal-molli"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/21/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/hala-skaf-molli"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/gerome-canals"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/pascal-molli"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/22">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/claudia-lopez"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/hernan-astudillo"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/victor-codocedo"/>
+        <dc:subject>automated domain ontology</dc:subject>
+        <dc:subject>body of knowledge</dc:subject>
+        <dc:subject>digital assets contextualization</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:title>Jump-starting a Body-of-Knowledge with a Stylized Semantic Wiki Built on a Discipline Ontology</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/22/authorlist"/>
+        <swrc:abstract>Several communities have engaged recently in assembling a Body of Knowledge (BOK) to organize the discipline knowledge for learning and sharing. BOK requirements typically include representing the domain, contextualizing resources (e.g. literature), and releasing the Social Web potential to maintain and improve it. Semantic wikis are excellent tools to handle domain (ontological) representations, to relate items, and to enable collaboration. Unfortunately, creating a whole BOK (structure, content and relations) from scratch may easily lead to the "white page syndrome", given the size and complexity of the domain information. This article presents an approach to jump-start a BOK, by implementing it as a semantic wiki organized around a domain ontology. Domain representation (structure and content) are initialized by automatically creating wiki pages for each ontology concept and per digital asset; the ontology itself is semi-automatically built using natural language processing (NLP) techniques. Contextualization is initialized by automatically linking concept- and asset-pages. The proposal's feasibility is shown with a prototype for a Software Architecture BOK, built from 1,000 articles indexed by a scienti¯c digital library. The proposed approach separates the issues of domain representation, resources contextualization, and social elaboration, allowing communities to try on alternate solutions for each issue.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper22.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>Jump-starting a Body-of-Knowledge with a Stylized Semantic Wiki Built on a Discipline Ontology</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/claudia-lopez"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/hernan-astudillo"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/victor-codocedo"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/22/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/victor-codocedo"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/claudia-lopez"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/hernan-astudillo"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/3">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/eric-leclercq"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/marinette-savonnet"/>
+        <dc:subject>application</dc:subject>
+        <dc:subject>semantic consistency</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:title>Access and Annotation of Archaelogical Corpus via a SemanticWiki</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/3/authorlist"/>
+        <swrc:abstract>Semantic wikis have shown their ability to allow knowledge management and collaborative authoring. They are particularly appropriate for scientific collaboration. This paper details the main concepts and the architecture of WikiBridge, a semantic wiki, and its application in the archaelogical domain. Archaeologists primarily have a documentcentric work. Adding meta-information in the form of annotations has proved useful to enhance search. WikiBridge combines models and ontologies to increase data consistency within the wiki. Moreover, it allows several types of annotations: simple annotation, n-ary relations and recursive annotations. The consistency of these annotations is checked synchronously or asynchronously by using structural or domain constraints.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper03.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>Access and Annotation of Archaelogical Corpus via a SemanticWiki</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/eric-leclercq"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/marinette-savonnet"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/3/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/eric-leclercq"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/marinette-savonnet"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/4">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/francois-bry"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/jakub-kotowski"/>
+        <dc:subject>explanation</dc:subject>
+        <dc:subject>reasoning</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:subject>updates</dc:subject>
+        <dc:title>A Perfect Match for Reasoning, Explanation, and Reason Maintenance: OWL 2 RL and Semantic Wikis</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/4/authorlist"/>
+        <swrc:abstract>Reasoning in wikis has focused so far mostly on expressiveness and tractability and neglected related issues of updates and explanation. In this demo, we show reasoning, explanation, and updates in the KiWi wiki and argue that it is a perfect match for OWL 2 RL reasoning. The KiWi implementation features a simple triple pattern rule based inconsistency tolerant language, sKWRL, which can naturally express most of OWL2 RL rules. Explanation and reason maintenance nicely complement the \work-in-progress" focus of wikis by explaining how which information was derived and thus help users to easily discover and remove sources of inconsistencies.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper04.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>A Perfect Match for Reasoning, Explanation, and Reason Maintenance: OWL 2 RL and Semantic Wikis</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/francois-bry"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/jakub-kotowski"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/4/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/jakub-kotowski"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/francois-bry"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/5">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/fabian-kneissl"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/klara-weiand"/>
+        <dc:subject>PageRank</dc:subject>
+        <dc:subject>fuzzy matching</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:subject>structured data</dc:subject>
+        <dc:title>PEST: Term-Propagation over Wiki-Structures as Eigenvector Computation</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/5/authorlist"/>
+        <swrc:abstract>We present PEST, a novel approach to approximate querying of structured wiki data that exploits the structure of that data to propagate term weights between related wiki pages and tags. Based on the PEST matrix, eigenvectors representing the distribution of a term after propagation are computed. The result is an index which takes the document structure into account and can be used with standard document retrieval techniques. This article gives a detailed outline of the approach and gives first experimental results showing its viability.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper05.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>PEST: Term-Propagation over Wiki-Structures as Eigenvector Computation</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/fabian-kneissl"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/klara-weiand"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/5/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/klara-weiand"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/fabian-kneissl"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/6">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/alasdair-j-g-gray"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/iadh-ounis"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/norman-gray"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/stuart-chalmers"/>
+        <dc:subject>astronomy</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:subject>semantics</dc:subject>
+        <dc:subject>vocabularies</dc:subject>
+        <dc:title>Collaborative Editing and Linking of Astronomy Vocabularies Using Semantic Mediawiki</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/6/authorlist"/>
+        <swrc:abstract>The International Virtual Observatory Alliance (IVOA) comprises 17 Virtual Observatory (VO) projects and facilitates the creation, coordination and collaboration of standards promoting the use and reuse of astronomical data archives. The Semantics working group in the IVOA has repurposed five existing vocabularies (modelled using SKOS), capturing concepts within specific areas of astronomy expertise and applications. A major task however, is to promote the uptake of these semantic representations within the Astronomy community, and further, to let astronomers model (and in turn create links from) their own custom vocabularies to use these existing definitions. In this paper we show how Semantic Mediawiki (SMW) can be used to support expert interaction in the lifecycle of vocabulary creation, linking, and maintenance.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper06.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>Collaborative Editing and Linking of Astronomy Vocabularies Using Semantic Mediawiki</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/alasdair-j-g-gray"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/iadh-ounis"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/norman-gray"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/stuart-chalmers"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/6/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/stuart-chalmers"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/norman-gray"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/iadh-ounis"/>
+        <rdf:_4 rdf:resource="http://data.semanticweb.org/person/alasdair-j-g-gray"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/7">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/marek-schmidt"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/pavel-smrz"/>
+        <dc:subject>KiWi</dc:subject>
+        <dc:subject>annotation</dc:subject>
+        <dc:subject>information extraction</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:title>Annotation component for a Semantic Wiki</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/7/authorlist"/>
+        <swrc:abstract>This demonstration shows the prototype of the annotation component in the KiWi semantic wiki and how it enables seamless com- bination and transformation of informal and formal knowledge. It shows how the advanced KiWi features, such as nested content items, reasoning and information extraction, can be used together to make rich semantic annotation both easy and useful.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper07.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>Annotation component for a Semantic Wiki</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/marek-schmidt"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/pavel-smrz"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/7/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/marek-schmidt"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/pavel-smrz"/>
+    </rdf:Description>
+
+    <swrc:InProceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/8">
+        <swc:isPartOf rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/alejandro-fernandez"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/alicia-diaz"/>
+        <dc:creator rdf:resource="http://data.semanticweb.org/person/martin-rosenfeld"/>
+        <dc:subject>Refactoring</dc:subject>
+        <dc:subject>Semantic Wiki Evolution</dc:subject>
+        <dc:subject>Semantic Wiki Quality</dc:subject>
+        <dc:subject>semantic wiki</dc:subject>
+        <dc:title>Semantic Wiki Refactoring. A strategy to assist Semantic Wiki evolution</dc:title>
+        <bibo:authorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/8/authorlist"/>
+        <swrc:abstract>The content and structure of a wiki evolve as a result of the collaborative effort of the wiki users. In semantic wikis, this also results in the evolution of the ontology that is implicitly expressed through the semantic annotations. Without proper guidance, the semantic wiki can evolve in a chaotic manner resulting in quality problems in the underlying ontology, e.g. inconsistencies. As the wiki grows in size, the detection and solution of quality problems become more difficult. We propose an approach to detect quality problems in semantic wikis and assist users in the process of solving them. Our approach is inspired by the key principles of software refactoring, namely the cataloging and automated detection of quality problems (bad smells), and the application of quality improvement transformations (refactorings). In this paper we discuss the problem of evolving semantic wikis, present the core model of our approach, and introduce an extensible catalog of semantic wiki bad smells and an extensible toolkit of semantic wiki refactorings.</swrc:abstract>
+        <swrc:month>May</swrc:month>
+        <swrc:url rdf:resource="http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-632/paper08.pdf"/>
+        <swrc:year>2010</swrc:year>
+        <rdfs:label>Semantic Wiki Refactoring. A strategy to assist Semantic Wiki evolution</rdfs:label>
+        <maker rdf:resource="http://data.semanticweb.org/person/alejandro-fernandez"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/alicia-diaz"/>
+        <maker rdf:resource="http://data.semanticweb.org/person/martin-rosenfeld"/>
+    </swrc:InProceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/8/authorlist">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/martin-rosenfeld"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/alejandro-fernandez"/>
+        <rdf:_3 rdf:resource="http://data.semanticweb.org/person/alicia-diaz"/>
+    </rdf:Description>
+
+    <swrc:Proceedings rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/proceedings">
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/10"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/11"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/12"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/13"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/14"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/15"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/16"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/17"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/18"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/19"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/20"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/21"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/22"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/3"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/4"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/5"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/6"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/7"/>
+        <swc:hasPart rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/paper/main/8"/>
+        <swc:relatedToEvent rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010"/>
+        <bibo:editorList rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010/proceedings/editor_list"/>
+        <swrc:booktitle>Proceedings of 5th International Workshop on Semantic Wikis (SemWiki2010) at ESWC2010, CEUR.org vol-632</swrc:booktitle>
+        <swrc:editor rdf:resource="http://data.semanticweb.org/person/christoph-lange"/>
+        <swrc:editor rdf:resource="http://data.semanticweb.org/person/jochen-reutelshoefer"/>
+        <swrc:month>May</swrc:month>
+        <swrc:year>2010</swrc:year>
+    </swrc:Proceedings>
+
+    <rdf:Description rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/proceedings/editor_list">
+        <rdf:_1 rdf:resource="http://data.semanticweb.org/person/jochen-reutelshoefer"/>
+        <rdf:_2 rdf:resource="http://data.semanticweb.org/person/christoph-lange"/>
+    </rdf:Description>
+
+    <swc:ProgrammeCommitteeMember rdf:about="http://data.semanticweb.org/workshop/semwiki/2010/programme-committee-member">
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/alexandre-passant"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/alicia-diaz"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/amedeo-napoli"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/amelie-cordier"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/bjoern-decker"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/christine-mueller"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/claudia-mueller-birn"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/daniel-schwabe"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/david-aumueller"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/elena-paslaru-bontas-simperl"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/fabien-gandon"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/fred-durao"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/friedel-voelker"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/grzegorz-j-nalepa"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/guoqian-jiang"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/harold-r-solbrig"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/herman-geuvers"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/jakub-kotowski"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/jean-rohmer"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/joachim-baumeister"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/katharina-siorpaes"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/klara-weiand"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/malte-kiesel"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/marek-schmidt"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/markus-kroetzsch"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/martin-hepp"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/matthias-samwald"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/max-voelkel"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/michael-erdmann"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/pascal-molli"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/rolf-sint"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/sebastian-tramp"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/siegfried-handschuh"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/soeren-auer"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/stefanie-lindstaedt"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/stephanie-stroka"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/thomas-kurz"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/tobias-buerger"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/tobias-kuhn"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/tudor-groza"/>
+        <swc:heldBy rdf:resource="http://data.semanticweb.org/person/viktoria-pammer"/>
+        <swc:isRoleAt rdf:resource="http://data.semanticweb.org/workshop/semwiki/2010"/>
+        <rdfs:label>Programme Committee Member</rdfs:label>
+    </swc:ProgrammeCommitteeMember>
+</rdf:RDF>

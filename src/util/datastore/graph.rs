@@ -2,13 +2,17 @@ extern crate bimap;
 extern crate bitvec;
 extern crate serde;
 
-extern crate heapsize;
-
-use bimap::BiMap;
+use bimap::BiBTreeMap;
 use bitvec::{prelude::bitvec, vec::BitVec};
 use serde::{Serialize, Deserialize};
 
-use super::{k2_tree::K2Tree, super::Triple};
+use super::{
+  k2_tree::K2Tree,
+  super::{
+    Triple,
+    rdf::parser::*,
+  }
+};
 
 /* Subjects and Objects are mapped in the same
      collection to a unique int while Predicates
@@ -16,48 +20,6 @@ use super::{k2_tree::K2Tree, super::Triple};
    Each slice contains a representation of a 2-d bit matrix,
      each cell corresponding to a Subject-Object pair
      connected by a single Predicate. */
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Hash)]
-enum Node<T> {
-  Alive(T),
-  Dead(T),
-}
-impl<T> Node<T> {
-  pub fn unwrap(self) -> T {
-    match self {
-      Self::Alive(t)
-      | Self::Dead(t) => t,
-    }
-  }
-  pub fn inner(&self) -> &T {
-    match self {
-      Self::Alive(t)
-      | Self::Dead(t) => t,
-    }
-  }
-  pub fn inner_mut(&mut self) -> &mut T {
-    match self {
-      Self::Alive(t)
-      | Self::Dead(t) => t,
-    }
-  }
-  pub fn into_dead(self) -> Self {
-    if let Self::Alive(t) = self {
-      Self::Dead(t)
-    }
-    else {
-      self
-    }
-  }
-  pub fn into_alive(self) -> Self {
-    if let Self::Dead(t) = self {
-      Self::Alive(t)
-    }
-    else {
-      self
-    }
-  }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Graph {
   //Store dict_max because the max R-value in a dict is expensive to calulate on-the-fly
@@ -65,9 +27,9 @@ pub struct Graph {
   //Use BiMap instead of HashMap because we want to be able to find the strings rows/columns represent
   dict_max: usize,
   dict_tombstones: Vec<usize>,
-  pub dict: BiMap<String, usize>,
+  dict: BiBTreeMap<String, usize>,
   pred_tombstones: Vec<usize>,
-  pub predicates: BiMap<String, usize>,
+  predicates: BiBTreeMap<String, usize>,
   pub slices: Vec<Option<Box<K2Tree>>>,
 }
 
@@ -77,9 +39,9 @@ impl Graph {
     Graph {
       dict_max: 0,
       dict_tombstones: Vec::new(),
-      dict: BiMap::new(),
+      dict: BiBTreeMap::new(),
       pred_tombstones: Vec::new(),
-      predicates: BiMap::new(),
+      predicates: BiBTreeMap::new(),
       slices: Vec::new(),
     }
   }
@@ -306,6 +268,56 @@ impl Graph {
     }
     Ok(())
   }
+  fn from_rdf(path: &str) -> Self {
+    let parsed = ParsedTriples::from_triples(parse_rdf(path));
+    Self::new().build_from_parsed(parsed)
+  }
+  fn build_from_parsed(mut self, parsed: ParsedTriples) -> Self {
+    use std::thread;
+    use std::sync::{Mutex, Arc};
+
+    println!("Pred max: {}", parsed.pred_max);
+    println!("Pred len: {}", parsed.partitioned_triples.len());
+
+    for i in 0..=parsed.dict_max {
+      self.dict_max += 1;
+      self.dict.insert(parsed.dict.get_by_right(&i).unwrap().clone(), i);
+    }
+    for i in 0..=parsed.pred_max {
+      self.predicates.insert(parsed.predicates.get_by_right(&i).unwrap().clone(), i);
+      self.slices.push(None);
+    }
+
+    let trees: Arc<Mutex<Vec<Option<K2Tree>>>> = Arc::new(Mutex::new(Vec::new()));
+    let mut handles = Vec::new();
+    let dict_max = self.dict_max;
+
+    for i in 0..parsed.partitioned_triples.len() {
+      trees.lock().unwrap().push(None);
+      let doubles = parsed.partitioned_triples[i].clone();
+      let trees = Arc::clone(&trees);
+      handles.push(thread::spawn(move || {
+        let mut tree = K2Tree::new();
+        while tree.matrix_width() < dict_max {
+          tree.grow();
+        }
+        for [x, y] in doubles {
+          tree.set(x, y, true);
+        }
+        trees.lock().unwrap()[i] = Some(tree);
+      }));
+    }
+    for handle in handles { handle.join().unwrap(); }
+
+    let final_trees = Arc::try_unwrap(trees).unwrap().into_inner().unwrap();
+    for (i, tree) in final_trees.into_iter().enumerate() {
+      if let Some(tree) = tree {
+        self.slices[i] = Some(Box::new(tree));
+      }
+    }
+
+    self
+  }
 }
 
 /* Iterators */
@@ -319,12 +331,12 @@ impl Graph {
   pub fn heapsize(&self) -> usize {
     let mut size: usize = std::mem::size_of_val(self);
     size += std::mem::size_of::<usize>() * self.dict_tombstones.len();
-    for (string, n) in self.dict.iter() {
+    for (string, _) in self.dict.iter() {
       size += string.as_bytes().len();
       size += std::mem::size_of::<usize>();
     }
     size += std::mem::size_of::<usize>() * self.pred_tombstones.len();
-    for (string, n) in self.predicates.iter() {
+    for (string, _) in self.predicates.iter() {
       size += string.as_bytes().len();
       size += std::mem::size_of::<usize>();
     }
@@ -365,38 +377,24 @@ mod unit_tests {
     use std::io::prelude::*;
     use super::super::super::rdf::parser;
     let mut g = Graph::new();
-    // for triple in parser::parse_rdf(String::from("cold-2010-complete.rdf")) {
-    //   g.insert_triple(triple);
-    // }
-    for triple in parser::parse_rdf(String::from("dc-2010-complete.rdf")) {
-      // if &triple[1] == "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" {
-        // println!("inserting {:?}", triple);
+    for triple in parser::parse_rdf("models\\www-2007-complete.rdf") {
+        println!("inserting {:?}", triple);
         g.insert_triple(triple);
-      // }
     }
-    // for triple in parser::parse_rdf(String::from("esoe-2007-complete.rdf")) {
-    //   // if &triple[1] == "http://swrc.ontoware.org/ontology#affiliation" {
-    //   //   println!("inserting {:?}", triple);
-    //   //   g.insert_triple(triple);
-    //   //   println!("{:#?}", g);
-    //   // }
-    //   // else {
-    //     g.insert_triple(triple);
-    //   // }
-    // }
     // let mut file = std::fs::File::create("out.txt").unwrap();
     // file.write_all(format!("{:#?}", g).as_bytes());
+    dbg!(&g);
+    println!("{}", g.slices.len());
     println!("Size of Graph: {}", g.heapsize());
   }
   #[test]
-  fn heapsize_test() {
+  fn from_rdf_0() {
+    use std::io::prelude::*;
     use super::super::super::rdf::parser;
-    let mut g = Graph::new();
-    for triple in parser::parse_rdf(String::from("cold-2010-complete.rdf")) {
-      g.insert_triple(triple);
-    }
-    unsafe {
-      let x: *const Graph = &g;
-      println!("Size of Graph: {}", heapsize::heap_size_of(x)); }
+    let mut g = Graph::from_rdf("models\\www-2011-complete.rdf");
+    // dbg!(&g);
+    // let mut file = std::fs::File::create("out.txt").unwrap();
+    // file.write_all(format!("{:#?}", g).as_bytes());
+    println!("Size of Graph: {}", g.heapsize());
   }
 }

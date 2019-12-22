@@ -1,5 +1,8 @@
 extern crate bitvec;
 extern crate serde;
+extern crate rand;
+
+use rand::prelude::*;
 
 use bitvec::{prelude::bitvec, vec::BitVec};
 use serde::{
@@ -107,10 +110,6 @@ impl K2Tree {
   }
   pub fn set(&mut self, x: usize, y: usize, state: bool) -> Result<(), ()> {
     /* Assuming k=2 */
-    // println!("Layer starts: {:?}", self.slayer_starts);
-    // println!("Stem to leaf: {:?}", self.stem_to_leaf);
-    // println!("Tree: {}", self);
-    // println!("Setting bit at: {}, {}", x, y);
     match self.matrix_bit(x, y, self.matrix_width)? {
       DescendResult::Leaf(leaf_start, leaf_range) => {
         if leaf_range[0][1] - leaf_range[0][0] != 1
@@ -618,8 +617,6 @@ impl K2Tree {
   }
   fn leaf_start(&self, stem_bitpos: usize) -> Result<usize, ()> {
     if !self.stems[stem_bitpos] { return Err(()) }
-    // println!("{}", (stem_bitpos - self.slayer_starts[self.slayer_starts.len()-1]));
-    // println!("Tree: {}", self);
     Ok(self.stem_to_leaf
             .iter()
             .position(|&n| n == (stem_bitpos - self.slayer_starts[self.slayer_starts.len()-1]))
@@ -743,6 +740,21 @@ mod unit_tests {
       for y in ys.iter() {
         tree.set(x, *y, true);
       }
+    }
+  }
+  #[test]
+  fn flood_2() {
+    let mut rng = rand::thread_rng();
+    let mut tree = K2Tree::new();
+    for _ in 0..10 { tree.grow(); }
+    dbg!(tree.matrix_width());
+    let mut nums: Vec<[usize; 2]> = Vec::new();
+    for _ in 0..500 {
+      let x: usize = rng.gen_range(0, 512);
+      let y: usize = rng.gen_range(0, 512);
+      nums.push([x, y]);
+      println!("{:?}", nums);
+      tree.set(x, y, true);
     }
   }
   #[test]
