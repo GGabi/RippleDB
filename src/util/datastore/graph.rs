@@ -1,6 +1,7 @@
 extern crate bimap;
 extern crate bitvec;
 extern crate serde;
+extern crate futures;
 
 use bimap::BiBTreeMap;
 use bitvec::{prelude::bitvec, vec::BitVec};
@@ -10,7 +11,7 @@ use super::{
   k2_tree::K2Tree,
   super::{
     Triple,
-    rdf::parser::*,
+    rdf::{parser::ParsedTriples, query::Sparql},
   }
 };
 
@@ -45,7 +46,13 @@ impl Graph {
       slices: Vec::new(),
     }
   }
-  fn get(&self, query: &()) -> () {
+  fn get(&self, query: &Sparql) -> () {
+    /* Initially only provide support for one variable, then scale up */
+    /* Get using first triple
+     * Then get the second triple, compare the results and filter
+    to only contain the ones fit the pattern
+     * Loop until all conditions
+     * Return results */
     unimplemented!()
   }
   fn insert_triple(&mut self, val: Triple) -> Result<(), ()> {
@@ -268,33 +275,28 @@ impl Graph {
     }
     Ok(())
   }
-  fn from_rdf(path: &str) -> Self {
-    let parsed = ParsedTriples::from_triples(parse_rdf(path));
-    Self::new().build_from_parsed(parsed)
-  }
-  fn build_from_parsed(mut self, parsed: ParsedTriples) -> Self {
-    use std::thread;
-    use std::sync::{Mutex, Arc};
+  fn from_rdf(path: &str) -> Result<Self, ()> {
+    use std::{thread, sync::{Mutex, Arc}};
+    /* Parse the .rdf file and initialise fields all
+    the Graph's fields except for slices */
+    let ParsedTriples {
+      dict_max,
+      dict,
+      pred_max: _,
+      predicates,
+      triples: _,
+      partitioned_triples,
+    } = match ParsedTriples::from_rdf(path) {
+      Ok(p_trips) => p_trips,
+      Err(e) => return Err(()),
+    };
 
-    println!("Pred max: {}", parsed.pred_max);
-    println!("Pred len: {}", parsed.partitioned_triples.len());
-
-    for i in 0..=parsed.dict_max {
-      self.dict_max += 1;
-      self.dict.insert(parsed.dict.get_by_right(&i).unwrap().clone(), i);
-    }
-    for i in 0..=parsed.pred_max {
-      self.predicates.insert(parsed.predicates.get_by_right(&i).unwrap().clone(), i);
-      self.slices.push(None);
-    }
-
-    let trees: Arc<Mutex<Vec<Option<K2Tree>>>> = Arc::new(Mutex::new(Vec::new()));
+    /* Build each K2Tree in parallel */
+    let trees = Arc::new(Mutex::new(Vec::new()));
     let mut handles = Vec::new();
-    let dict_max = self.dict_max;
-
-    for i in 0..parsed.partitioned_triples.len() {
-      trees.lock().unwrap().push(None);
-      let doubles = parsed.partitioned_triples[i].clone();
+    for i in 0..partitioned_triples.len() {
+      trees.lock().unwrap().push(Err(()));
+      let doubles = partitioned_triples[i].clone();
       let trees = Arc::clone(&trees);
       handles.push(thread::spawn(move || {
         let mut tree = K2Tree::new();
@@ -302,22 +304,105 @@ impl Graph {
           tree.grow();
         }
         for [x, y] in doubles {
-          tree.set(x, y, true);
+          if let Err(_) = tree.set(x, y, true) {
+            return
+          }
         }
-        trees.lock().unwrap()[i] = Some(tree);
+        trees.lock().unwrap()[i] = Ok(tree);
       }));
     }
     for handle in handles { handle.join().unwrap(); }
 
-    let final_trees = Arc::try_unwrap(trees).unwrap().into_inner().unwrap();
-    for (i, tree) in final_trees.into_iter().enumerate() {
-      if let Some(tree) = tree {
-        self.slices[i] = Some(Box::new(tree));
+    /* Check if every slice was built successfully and 
+    inserts each one into the correct location in the Graph's
+    slices field */
+    let mut slices: Vec<Option<Box<K2Tree>>> = Vec::new();
+    for tree_result in Arc::try_unwrap(trees)
+      .unwrap()
+      .into_inner()
+      .unwrap()
+      .into_iter() {
+      if let Ok(tree) = tree_result {
+        slices.push(Some(Box::new(tree)));
+      }
+      else {
+        /* One of the K2Trees failed to build so
+        Graph integrity is compromised: abort */
+        return Err(())
       }
     }
 
-    self
+    Ok(Graph {
+      dict_max: dict_max,
+      dict_tombstones: Vec::new(),
+      dict: dict,
+      pred_tombstones: Vec::new(),
+      predicates: predicates,
+      slices: slices,
+    })
   }
+  async fn from_rdf_async(path: &str) -> Result<Self, ()> {
+    use futures::stream::FuturesOrdered;
+    use futures::StreamExt;
+
+    /* Parse the .rdf file and initialise fields all
+    the Graph's fields except for slices */
+    let ParsedTriples {
+      dict_max,
+      dict,
+      pred_max: _,
+      predicates,
+      triples: _,
+      partitioned_triples,
+    } = match ParsedTriples::from_rdf(path) {
+      Ok(p_trips) => p_trips,
+      Err(e) => return Err(()),
+    };
+
+    /* Build each K2Tree concurrently on one thread */
+    let mut tree_futs = FuturesOrdered::new();
+    for i in 0..partitioned_triples.len() {
+      let doubles = partitioned_triples[i].clone();
+      tree_futs.push(async move {
+        let mut tree = K2Tree::new();
+        while tree.matrix_width() < dict_max {
+          tree.grow();
+        }
+        for [x, y] in doubles {
+          if let Err(_) = tree.set(x, y, true) {
+            return Err(())
+          }
+        }
+        Ok(tree)
+      });
+    }
+
+    /* Check if every slice was built successfully and 
+    inserts each one into the correct location in the Graph's
+    slices field */
+    let mut trees = Vec::new();
+    while let Some(fut_result) = tree_futs.next().await {
+      if let Ok(tree) = fut_result {
+        trees.push(Some(Box::new(tree)));
+      }
+      else {
+        /* One of the K2Trees failed to build so
+        Graph integrity is compromised: abort */
+        return Err(())
+      }
+    }
+    
+    Ok(Graph {
+      dict_max: dict_max,
+      dict_tombstones: Vec::new(),
+      dict: dict,
+      pred_tombstones: Vec::new(),
+      predicates: predicates,
+      slices: trees,
+    })
+  }
+  /*For even greater building performance get it to build the trees in the background and saved to files
+    If the predicate isn't built yet on query, go build it, otherwise finish building the rest. */
 }
 
 /* Iterators */
@@ -325,6 +410,101 @@ impl Graph {
 /* Std Traits */
 
 /* Private */
+impl Graph {
+  /* Return the triples in the compact form of their dict index */
+  fn get_from_triple(&self, triple: [Option<&str>; 3]) -> Vec<[usize; 3]> {
+    match triple {
+      [Some(s), Some(p), Some(o)] => self.spo(s, p, o),
+      [None, Some(p), Some(o)] => self._po(p, o),
+      [Some(s), None, Some(o)] => self.s_o(s, o),
+      [Some(s), Some(p), None] => self.sp_(s, p),
+      [None, None, Some(o)] => self.__o(o),
+      [None, Some(p), None] => self._p_(p),
+      [Some(s), None, None] => self.s__(s),
+      [None, None, None] => self.___(),
+    }
+  }
+  fn spo(&self, s: &str, p: &str, o: &str) -> Vec<[usize; 3]> {
+    match [self.dict.get_by_left(&s.to_string()),
+      self.dict.get_by_left(&o.to_string()),
+      self.predicates.get_by_left(&p.to_string())] {
+        [Some(&x), Some(&y), Some(&slice_index)] => {
+          if let Some(slice) = &self.slices[slice_index] {
+            match slice.get(x, y) {
+              Ok(b) if b => vec![[x, slice_index, y]],
+              _ => Vec::new(),
+            }
+          }
+          else {
+            Vec::new()
+          }
+        },
+        _ => Vec::new(),
+    }
+  }
+  fn _po(&self, p: &str, o: &str) -> Vec<[usize; 3]> {
+    match [self.dict.get_by_left(&o.to_string()),
+      self.predicates.get_by_left(&p.to_string())] {
+        [Some(&y), Some(&slice_index)] => {
+          if let Some(slice) = &self.slices[slice_index] {
+            match slice.get_row(y) {
+              Ok(bitvec) => one_positions(&bitvec)
+                .into_iter()
+                .map(|pos| [pos, slice_index, y])
+                .collect(),
+              _ => Vec::new(),
+            }
+          }
+          else {
+            Vec::new()
+          }
+        },
+        _ => Vec::new(),
+    }
+  }
+  fn s_o(&self, s: &str, o: &str) -> Vec<[usize; 3]> {
+    match [self.dict.get_by_left(&s.to_string()),
+      self.predicates.get_by_left(&o.to_string())] {
+        [Some(&x), Some(&y)] => {
+          let mut triples: Vec<[usize; 3]> = Vec::new();
+          for (i, slice) in self.slices.iter().enumerate() {
+            if let Some(slice) = slice {
+              match slice.get(x, y) {
+                Ok(b) if b => triples.push([x, i, y]),
+                _ => {},
+              };
+            }
+          }
+          triples
+        },
+        _ => Vec::new(),
+    }
+  }
+  fn sp_(&self, s: &str, p: &str) -> Vec<[usize; 3]> {
+    match [self.dict.get_by_left(&s.to_string()),
+      self.predicates.get_by_left(&p.to_string())] {
+        [Some(&x), Some(&slice_index)] => {
+          if let Some(slice) = &self.slices[slice_index] {
+            match slice.get_column(x) {
+              Ok(bitvec) => one_positions(&bitvec)
+                .into_iter()
+                .map(|pos| [x, slice_index, pos])
+                .collect(),
+              _ => Vec::new(),
+            }
+          }
+          else {
+            Vec::new()
+          }
+        },
+        _ => Vec::new(),
+    }
+  }
+  fn __o(&self, o: &str) -> Vec<[usize; 3]> { unimplemented!() }
+  fn _p_(&self, p: &str) -> Vec<[usize; 3]> { unimplemented!() }
+  fn s__(&self, s: &str) -> Vec<[usize; 3]> { unimplemented!() }
+  fn ___(&self) -> Vec<[usize; 3]> { unimplemented!() }
+}
 
 /* Utils */
 impl Graph {
@@ -351,6 +531,16 @@ impl Graph {
 fn ones_in_bitvec(bits: &BitVec) -> usize {
   bits.iter().fold(0, |total, bit| total + bit as usize)
 }
+fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
+  bit_vec
+  .iter()
+  .enumerate()
+  .filter_map(
+    |(pos, bit)|
+    if bit { Some(pos) }
+    else   { None })
+  .collect()
+}
 
 /* Unit Tests */
 #[cfg(test)]
@@ -373,28 +563,12 @@ mod unit_tests {
     println!("{:#?}", g);
   }
   #[test]
-  fn from_file() {
-    use std::io::prelude::*;
-    use super::super::super::rdf::parser;
-    let mut g = Graph::new();
-    for triple in parser::parse_rdf("models\\www-2007-complete.rdf") {
-        println!("inserting {:?}", triple);
-        g.insert_triple(triple);
-    }
-    // let mut file = std::fs::File::create("out.txt").unwrap();
-    // file.write_all(format!("{:#?}", g).as_bytes());
-    dbg!(&g);
-    println!("{}", g.slices.len());
-    println!("Size of Graph: {}", g.heapsize());
+  fn from_rdf_0() {
+    Graph::from_rdf("models\\www-2011-complete.rdf");
   }
   #[test]
-  fn from_rdf_0() {
-    use std::io::prelude::*;
-    use super::super::super::rdf::parser;
-    let mut g = Graph::from_rdf("models\\www-2011-complete.rdf");
-    // dbg!(&g);
-    // let mut file = std::fs::File::create("out.txt").unwrap();
-    // file.write_all(format!("{:#?}", g).as_bytes());
-    println!("Size of Graph: {}", g.heapsize());
+  fn from_rdf_async_0() {
+    use futures::executor;
+    executor::block_on(Graph::from_rdf_async("models\\www-2011-complete.rdf"));
   }
 }

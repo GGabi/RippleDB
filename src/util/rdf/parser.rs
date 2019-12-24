@@ -81,7 +81,10 @@ impl ParsedTriples {
       else {
         partitioned_trips[t[1]].push([t[0], t[2]]);
       }
+      indexed_trips.push(t);
     }
+
+    println!("Number of triples: {}", indexed_trips.len());
     
     ParsedTriples {
       dict_max: dict_max,
@@ -91,6 +94,57 @@ impl ParsedTriples {
       triples: indexed_trips,
       partitioned_triples: partitioned_trips,
     }
+  }
+  pub fn from_rdf(path: &str) -> Result<Self, rio_xml::RdfXmlError> {
+    use std::io::BufReader;
+    use std::fs::File;
+    use rio_xml::{RdfXmlParser, RdfXmlError};
+    use rio_api::{
+      parser::TriplesParser,
+      model::{
+        Triple as RioTriple,
+        NamedOrBlankNode,
+        NamedNode,
+        Term,
+        Literal::{Simple, Typed, LanguageTaggedString}
+      }
+    };
+
+    let mut triples: Vec<Triple> = Vec::new();
+
+    RdfXmlParser::new(BufReader::new(File::open(path.clone()).unwrap()), &format!("file:{}", path))
+      .unwrap()
+      .parse_all(&mut |t| {
+        match t {
+          RioTriple {
+            subject: NamedOrBlankNode::NamedNode(NamedNode { iri: s }),
+            predicate: NamedNode { iri: p },
+            object: o,
+          } => {
+            match o {
+              Term::Literal(Simple {
+                value: o
+              }) |
+              Term::Literal(Typed {
+                value: o,
+                datatype: _,
+              }) |
+              Term::Literal(LanguageTaggedString {
+                value: o,
+                language: _,
+              }) |
+              Term::NamedNode(NamedNode { iri: o }) => {
+                triples.push([s.to_string(), p.to_string(), o.to_string()]);
+              },
+              _ => {},
+            };
+          },
+          _ => {},
+        };
+        Ok(()) as Result<(), RdfXmlError>
+    })?;
+
+    Ok(Self::from_triples(triples))
   }
 }
 
@@ -145,61 +199,12 @@ pub fn parse_turtle(path: String) -> Vec<Triple> {
 
   ret_v
 }
-pub fn parse_rdf(path: &str) -> Vec<Triple> {
-  use rio_xml::{RdfXmlParser, RdfXmlError};
-  use rio_api::parser::TriplesParser;
-  use rio_api::model::{
-    NamedOrBlankNode,
-    NamedNode,
-    Term,
-    Literal::{Simple, Typed, LanguageTaggedString}
-  };
-  use rio_api::model::Triple as RioTriple;
-  use std::io::BufReader;
-  use std::fs::File;
-
-  let mut ret_v: Vec<Triple> = Vec::new();
-
-  RdfXmlParser::new(BufReader::new(File::open(path.clone()).unwrap()), &format!("file:{}", path))
-    .unwrap()
-    .parse_all(&mut |t| {
-      match t {
-        RioTriple {
-          subject: NamedOrBlankNode::NamedNode(NamedNode { iri: s }),
-          predicate: NamedNode { iri: p },
-          object: o,
-        } => {
-          match o {
-            Term::Literal(Simple {
-              value: o
-            }) |
-            Term::Literal(Typed {
-              value: o,
-              datatype: _,
-            }) |
-            Term::Literal(LanguageTaggedString {
-              value: o,
-              language: _,
-            }) |
-            Term::NamedNode(NamedNode { iri: o }) => {
-              ret_v.push([s.to_string(), p.to_string(), o.to_string()]);
-            },
-            _ => {},
-          };
-        },
-        _ => {},
-      };
-      Ok(()) as Result<(), RdfXmlError>
-  });
-
-  ret_v
-}
 
 #[cfg(test)]
 mod unit_tests {
   use super::*;
   #[test]
   fn try_parse() {
-    parse_rdf("models\\cold-2010-complete.rdf");
+    ParsedTriples::from_rdf("models\\cold-2010-complete.rdf");
   }
 }
