@@ -200,6 +200,7 @@ mod unit_tests {
   use super::*;
   #[test]
   fn try_parse() {
-    ParsedTriples::from_rdf("models\\cold-2010-complete.rdf");
+    use std::path::MAIN_SEPARATOR as PATH_SEP;
+    ParsedTriples::from_rdf(&format!("models{}cold-2010-complete.rdf", PATH_SEP));
   }
 }

@@ -4,15 +4,13 @@ extern crate serde;
 extern crate futures;
 
 use bimap::BiBTreeMap;
-use bitvec::{prelude::bitvec, vec::BitVec};
+use bitvec::vec::BitVec;
 use serde::{Serialize, Deserialize};
 
-use super::{
-  k2_tree::K2Tree,
-  super::{
-    Triple,
-    rdf::{parser::ParsedTriples, query::{Sparql, QueryUnit}},
-  }
+use crate::util::{
+  Triple,
+  datastore::k2_tree::K2Tree,
+  rdf::query::{Sparql, QueryUnit}
 };
 
 /* Subjects and Objects are mapped in the same
@@ -344,6 +342,7 @@ impl Graph {
     Ok(())
   }
   pub fn from_rdf(path: &str) -> Result<Self, ()> {
+    use crate::util::rdf::parser::ParsedTriples;
     use std::{thread, sync::{Mutex, Arc}};
     /* Parse the .rdf file and initialise fields all
     the Graph's fields except for slices */
@@ -358,7 +357,6 @@ impl Graph {
       Ok(p_trips) => p_trips,
       Err(e) => return Err(()),
     };
-
     /* Build each K2Tree in parallel */
     let trees = Arc::new(Mutex::new(Vec::new()));
     let mut handles = Vec::new();
@@ -380,7 +378,6 @@ impl Graph {
       }));
     }
     for handle in handles { handle.join().unwrap(); }
-
     /* Check if every slice was built successfully and 
     inserts each one into the correct location in the Graph's
     slices field */
@@ -399,7 +396,6 @@ impl Graph {
         return Err(())
       }
     }
-
     Ok(Graph {
       dict_max: dict_max,
       dict_tombstones: Vec::new(),
@@ -410,9 +406,8 @@ impl Graph {
     })
   }
   pub async fn from_rdf_async(path: &str) -> Result<Self, ()> {
-    use futures::stream::FuturesOrdered;
-    use futures::StreamExt;
-
+    use crate::util::rdf::parser::ParsedTriples;
+    use futures::{StreamExt, stream::FuturesOrdered};
     /* Parse the .rdf file and initialise fields all
     the Graph's fields except for slices */
     let ParsedTriples {
@@ -424,9 +419,8 @@ impl Graph {
       partitioned_triples,
     } = match ParsedTriples::from_rdf(path) {
       Ok(p_trips) => p_trips,
-      Err(e) => return Err(()),
+      Err(_) => return Err(()),
     };
-
     /* Build each K2Tree concurrently on one thread */
     let mut tree_futs = FuturesOrdered::new();
     for i in 0..partitioned_triples.len() {
@@ -444,7 +438,6 @@ impl Graph {
         Ok(tree)
       });
     }
-
     /* Check if every slice was built successfully and 
     inserts each one into the correct location in the Graph's
     slices field */
@@ -459,7 +452,6 @@ impl Graph {
         return Err(())
       }
     }
-    
     Ok(Graph {
       dict_max: dict_max,
       dict_tombstones: Vec::new(),
@@ -718,6 +710,7 @@ fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
 #[cfg(test)]
 mod unit_tests {
   use super::*;
+  use std::path::MAIN_SEPARATOR as PATH_SEP;
   #[test]
   fn query_test() {
     let mut g = Graph::new();
@@ -737,28 +730,14 @@ mod unit_tests {
     g.get(&query);
   }
   #[test]
-  fn manual_test() {
-    let mut g = Graph::new();
-    g.insert_triple(["Gabe".into(), "likes".into(), "Rust".into()]);
-    g.insert_triple(["Gabe".into(), "likes".into(), "Gabe".into()]);
-    g.insert_triple(["Gabe".into(), "hates".into(), "Ron".into()]);
-    g.insert_triple(["Gabe".into(), "hates".into(), "Gabe".into()]);
-    g.insert_triple(["".into(), "".into(), "".into()]);
-    g.insert_triple(["Gabe".into(), "".into(), "".into()]);
-    println!("{:#?}", g);
-    g.remove_triple(&["Gabe".into(), "hates".into(), "Ron".into()]);
-    g.remove_triple(&["Gabe".into(), "hates".into(), "Gabe".into()]);
-    // g.remove_triple(&["".into(), "".into(), "".into()]);
-    g.remove_triple(&["Gabe".into(), "".into(), "".into()]);
-    println!("{:#?}", g);
-  }
-  #[test]
   fn from_rdf_0() {
-    Graph::from_rdf("models\\lrec-2008-complete.rdf");
+    Graph::from_rdf(&format!("models{}pref_labels.rdf", PATH_SEP));
   }
   #[test]
   fn from_rdf_async_0() {
     use futures::executor;
-    executor::block_on(Graph::from_rdf_async("models\\www-2011-complete.rdf"));
+    executor::block_on(
+      Graph::from_rdf_async(&format!("models{}pref_labels.rdf", PATH_SEP))
+    );
   }
 }

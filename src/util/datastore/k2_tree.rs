@@ -950,28 +950,4 @@ mod unit_tests {
     assert_eq!(tree.leaves, bitvec![1,0,0,0,0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0]);
     assert_eq!(tree.stem_to_leaf, vec![0, 4, 5, 7, 8]);
   }
-  #[test]
-  fn show_me_the_changes() {
-    let mut tree = K2Tree::test_tree();
-    println!("{:#?}", tree);
-    tree.set(4, 5, false);
-    println!("{:#?}", tree);
-    tree.set(5, 4, false);
-    println!("{:#?}", tree);
-    tree.set(0, 4, false);
-    println!("{:#?}", tree);
-    tree.set(0, 0, true);
-    println!("{:#?}", tree);
-    tree.set(0, 1, true);
-    println!("{:#?}", tree);
-    tree.set(7, 7, true);
-    println!("{:#?}", tree);
-    tree.set(5, 4, true);
-    println!("{:#?}", tree);
-
-    println!("{}", tree);
-
-    let json = serde_json::to_string(&tree).unwrap();
-    println!("{}", json);
-  }
 }

@@ -2,11 +2,10 @@
 
 pub mod datastore;
 pub mod rdf;
-pub mod triplestore;
 
 /* Common Definitions */
 
-type Triple = [String; 3];
+pub type Triple = [String; 3];
 
 #[derive(Clone)]
 struct Nibble(u8);
