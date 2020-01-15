@@ -83,8 +83,6 @@ impl ParsedTriples {
       }
       indexed_trips.push(t);
     }
-
-    println!("Number of triples: {}", indexed_trips.len());
     
     ParsedTriples {
       dict_max: dict_max,
@@ -143,7 +141,6 @@ impl ParsedTriples {
         };
         Ok(()) as Result<(), RdfXmlError>
     })?;
-
     Ok(Self::from_triples(triples))
   }
 }
@@ -194,8 +191,6 @@ pub fn parse_turtle(path: String) -> Vec<Triple> {
       };
       Ok(()) as Result<(), TurtleError>
   });
-
-  println!("Parsed Triples: {:#?}", ret_v);
 
   ret_v
 }

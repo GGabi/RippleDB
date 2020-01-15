@@ -11,7 +11,7 @@ use super::{
   k2_tree::K2Tree,
   super::{
     Triple,
-    rdf::{parser::ParsedTriples, query::Sparql},
+    rdf::{parser::ParsedTriples, query::{Sparql, QueryUnit}},
   }
 };
 
@@ -36,7 +36,7 @@ pub struct Graph {
 
 /* Public */
 impl Graph {
-  fn new() -> Self {
+  pub fn new() -> Self {
     Graph {
       dict_max: 0,
       dict_tombstones: Vec::new(),
@@ -46,16 +46,84 @@ impl Graph {
       slices: Vec::new(),
     }
   }
-  fn get(&self, query: &Sparql) -> () {
-    /* Initially only provide support for one variable, then scale up */
-    /* Get using first triple
-     * Then get the second triple, compare the results and filter
-    to only contain the ones fit the pattern
-     * Loop until all conditions
-     * Return results */
-    unimplemented!()
+  pub fn get(&self, query: &Sparql) -> () {
+    /* Assume only one variable */
+    use std::collections::HashSet;
+    use QueryUnit::{Var, Val};
+    /* Util closures for later */
+    let cond_to_qt = |cond: &[QueryUnit; 3]| {
+      let mut qt: [Option<String>; 3] = [None, None, None];
+      if let Val(s) = &cond[0] { qt[0] = Some(s.to_string()); }
+      if let Val(p) = &cond[1] { qt[1] = Some(p.to_string()); }
+      if let Val(o) = &cond[2] { qt[2] = Some(o.to_string()); }
+      qt
+    };
+    let num_to_str = |[s, p, o]: &[usize; 3]| {
+      [
+        self.dict.get_by_right(&s).unwrap().to_string(),
+        self.predicates.get_by_right(&p).unwrap().to_string(),
+        self.dict. get_by_right(&o).unwrap().to_string()
+      ]
+    };
+    let var_pos = |cond: &[QueryUnit; 3]| {
+      match cond {
+        [Var(_), _, _] => 0,
+        [_, Var(_), _] => 1,
+        [_, _, Var(_)] => 2,
+        _ => 3
+      }
+    };
+    /* Gather raw results from each condition to filter later */
+    let mut results: Vec<(&[QueryUnit; 3], Vec<[String; 3]>)> = Vec::new();
+    for cond in query.conds.iter() {
+      let qt = cond_to_qt(cond);
+      let res = self.get_from_triple(qt);
+      results.push((cond, res.into_iter().map(|t| num_to_str(&t)).collect()));
+    }
+    /* Filter results */
+    let mut final_results: Vec<String> = results[0].1.iter().map(|[s, p, o]|
+      match var_pos(results[0].0) {
+        0 => s.clone(),
+        1 => p.clone(),
+        2 => o.clone(),
+        _ => String::new(),
+      }
+    ).collect();
+    let var_pos_1 = var_pos(results[1].0);
+    let mut used_vars: HashSet<String> = HashSet::new();
+    let mut vars_to_remove: Vec<usize> = Vec::new();
+    for (i, res) in final_results.iter().enumerate() {
+      if !used_vars.contains(res) {
+        used_vars.insert(res.clone());
+        let filter_t = match var_pos_1 {
+          0 => [Some(res.clone()), None, None],
+          1 => [None, Some(res.clone()), None],
+          2 => [None, None, Some(res.clone())],
+          _ => [None, None, None],
+        };
+        if self.filter_triples_str(results[1].1.clone(), filter_t).len() == 0 {
+          //We have a match!
+          vars_to_remove.push(i);
+        }
+      }
+    }
+    final_results = final_results.into_iter().enumerate().filter_map(|(i, res)| {
+      if vars_to_remove.len() > 0 {
+        if i == vars_to_remove[0] {
+          vars_to_remove.remove(0);
+          None
+        }
+        else {
+          Some(res)
+        }
+      }
+      else {
+        Some(res)
+      }
+    }).collect();
+    dbg!(final_results);
   }
-  fn insert_triple(&mut self, val: Triple) -> Result<(), ()> {
+  pub fn insert_triple(&mut self, val: Triple) -> Result<(), ()> {
     let col = match self.dict.get_by_left(&val[0]) {
       Some(&col) => col,
       None => {
@@ -151,7 +219,7 @@ impl Graph {
       None => Err(())
     }
   }
-  fn remove_triple(&mut self, [subject, predicate, object]: &Triple) -> Result<(), ()> {
+  pub fn remove_triple(&mut self, [subject, predicate, object]: &Triple) -> Result<(), ()> {
     /* TODO: Add ability to shrink matrix_width for all slices if
              needed */
     let (subject_pos, object_pos, slice_pos) = match [
@@ -275,7 +343,7 @@ impl Graph {
     }
     Ok(())
   }
-  fn from_rdf(path: &str) -> Result<Self, ()> {
+  pub fn from_rdf(path: &str) -> Result<Self, ()> {
     use std::{thread, sync::{Mutex, Arc}};
     /* Parse the .rdf file and initialise fields all
     the Graph's fields except for slices */
@@ -341,7 +409,7 @@ impl Graph {
       slices: slices,
     })
   }
-  async fn from_rdf_async(path: &str) -> Result<Self, ()> {
+  pub async fn from_rdf_async(path: &str) -> Result<Self, ()> {
     use futures::stream::FuturesOrdered;
     use futures::StreamExt;
 
@@ -411,16 +479,44 @@ impl Graph {
 
 /* Private */
 impl Graph {
+  fn filter_triples_str(&self, triples: Vec<[String; 3]>, pattern: [Option<String>; 3]) -> Vec<[String; 3]> {
+    triples.into_iter().filter(|[s, p, o]| {
+      match &pattern {
+        [Some(a), Some(b), Some(c)] => { s == a && p == b && o == c },
+        [None, Some(b), Some(c)] => { p == b && o == c },
+        [Some(a), None, Some(c)] => { s == a && o == c },
+        [Some(a), Some(b), None] => { s == a && p == b },
+        [None, None, Some(c)] => { o == c },
+        [None, Some(b), None] => { p == b },
+        [Some(a), None, None] => { s == a },
+        [None, None, None] => true,
+      }
+    }).collect()
+  }
+  fn filter_triples(&self, triples: Vec<[usize; 3]>, pattern: [Option<usize>; 3]) -> Vec<[usize; 3]> {
+    triples.into_iter().filter(|[s, p, o]| {
+      match pattern {
+        [Some(a), Some(b), Some(c)] => { *s == a && *p == b && *o == c },
+        [None, Some(b), Some(c)] => { *p == b && *o == c },
+        [Some(a), None, Some(c)] => { *s == a && *o == c },
+        [Some(a), Some(b), None] => { *s == a && *p == b },
+        [None, None, Some(c)] => { *o == c },
+        [None, Some(b), None] => { *p == b },
+        [Some(a), None, None] => { *s == a },
+        [None, None, None] => true,
+      }
+    }).collect()
+  }
   /* Return the triples in the compact form of their dict index */
-  fn get_from_triple(&self, triple: [Option<&str>; 3]) -> Vec<[usize; 3]> {
+  fn get_from_triple(&self, triple: [Option<String>; 3]) -> Vec<[usize; 3]> {
     match triple {
-      [Some(s), Some(p), Some(o)] => self.spo(s, p, o),
-      [None, Some(p), Some(o)] => self._po(p, o),
-      [Some(s), None, Some(o)] => self.s_o(s, o),
-      [Some(s), Some(p), None] => self.sp_(s, p),
-      [None, None, Some(o)] => self.__o(o),
-      [None, Some(p), None] => self._p_(p),
-      [Some(s), None, None] => self.s__(s),
+      [Some(s), Some(p), Some(o)] => self.spo(&s, &p, &o),
+      [None, Some(p), Some(o)] => self._po(&p, &o),
+      [Some(s), None, Some(o)] => self.s_o(&s, &o),
+      [Some(s), Some(p), None] => self.sp_(&s, &p),
+      [None, None, Some(o)] => self.__o(&o),
+      [None, Some(p), None] => self._p_(&p),
+      [Some(s), None, None] => self.s__(&s),
       [None, None, None] => self.___(),
     }
   }
@@ -500,10 +596,86 @@ impl Graph {
         _ => Vec::new(),
     }
   }
-  fn __o(&self, o: &str) -> Vec<[usize; 3]> { unimplemented!() }
-  fn _p_(&self, p: &str) -> Vec<[usize; 3]> { unimplemented!() }
-  fn s__(&self, s: &str) -> Vec<[usize; 3]> { unimplemented!() }
-  fn ___(&self) -> Vec<[usize; 3]> { unimplemented!() }
+  fn __o(&self, o: &str) -> Vec<[usize; 3]> {
+    match self.dict.get_by_left(&o.to_string()) {
+        Some(&y) => {
+          let mut ret_v = Vec::new();
+          for (index, slice) in self.slices.iter().enumerate() {
+            if let Some(slice) = slice {
+              ret_v.append(&mut match slice.get_row(y) {
+                Ok(bitvec) => one_positions(&bitvec)
+                  .into_iter()
+                  .map(|pos| [pos, index, y])
+                  .collect(),
+                _ => Vec::new(),
+              });
+            }
+          }
+          ret_v
+        },
+        _ => Vec::new(),
+    }
+  }
+  fn _p_(&self, p: &str) -> Vec<[usize; 3]> {
+    match self.predicates.get_by_left(&p.to_string()) {
+      Some(&slice_index) => {
+        if let Some(slice) = &self.slices[slice_index] {
+          let mut ret_v = Vec::new();
+          for x in 0..slice.matrix_width() {
+            ret_v.append(&mut match slice.get_column(x) {
+              Ok(bitvec) => one_positions(&bitvec)
+                .into_iter()
+                .map(|pos| [x, slice_index, pos])
+                .collect(),
+              _ => Vec::new(),
+            });
+          }
+          ret_v
+        }
+        else {
+          Vec::new()
+        }
+      },
+      _ => Vec::new(),
+    }
+  }
+  fn s__(&self, s: &str) -> Vec<[usize; 3]> {
+    match self.dict.get_by_left(&s.to_string()) {
+      Some(&x) => {
+        let mut ret_v = Vec::new();
+        for (index, slice) in self.slices.iter().enumerate() {
+          if let Some(slice) = slice {
+            ret_v.append(&mut match slice.get_column(x) {
+              Ok(bitvec) => one_positions(&bitvec)
+                .into_iter()
+                .map(|pos| [x, index, pos])
+                .collect(),
+              _ => Vec::new(),
+            });
+          }
+        }
+        ret_v
+      },
+      _ => Vec::new(),
+    }
+  }
+  fn ___(&self) -> Vec<[usize; 3]> {
+    let mut ret_v = Vec::new();
+    for (index, slice) in self.slices.iter().enumerate() {
+      if let Some(slice) = slice {
+        for x in 0..slice.matrix_width() {
+          ret_v.append(&mut match slice.get_column(x) {
+            Ok(bitvec) => one_positions(&bitvec)
+              .into_iter()
+              .map(|pos| [x, index, pos])
+              .collect(),
+            _ => Vec::new(),
+          });
+        }
+      }
+    };
+    ret_v
+  }
 }
 
 /* Utils */
@@ -547,6 +719,24 @@ fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
 mod unit_tests {
   use super::*;
   #[test]
+  fn query_test() {
+    let mut g = Graph::new();
+    g.insert_triple(["Gabe".into(), "likes".into(), "Rust".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Chris".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Ron".into()]);
+    g.insert_triple(["Gabe".into(), "hates".into(), "Js".into()]);
+    g.insert_triple(["Gabe".into(), "hates".into(), "Harry".into()]);
+    g.insert_triple(["Ron".into(), "is".into(), "malse".into()]);
+    g.insert_triple(["Scala".into(), "is".into(), "male".into()]);
+    g.insert_triple(["Chris".into(), "is".into(), "male".into()]);
+    let query = Sparql::new()
+      .select(vec!["$name".into()])
+      .filter(vec![["Gabe".into(), "likes".into(), "$name".into()],
+        ["$name".into(), "is".into(), "male".into()]]
+    );
+    g.get(&query);
+  }
+  #[test]
   fn manual_test() {
     let mut g = Graph::new();
     g.insert_triple(["Gabe".into(), "likes".into(), "Rust".into()]);
@@ -564,7 +754,7 @@ mod unit_tests {
   }
   #[test]
   fn from_rdf_0() {
-    Graph::from_rdf("models\\www-2011-complete.rdf");
+    Graph::from_rdf("models\\lrec-2008-complete.rdf");
   }
   #[test]
   fn from_rdf_async_0() {

@@ -36,14 +36,14 @@ impl Sparql {
       conds: Vec::new(),
     }
   }
-  pub fn select(&mut self, vars: Vec<String>) -> &mut Self {
+  pub fn select(mut self, vars: Vec<String>) -> Self {
     self.vars = vars.to_vec()
       .into_iter()
       .map(|x| QueryUnit::from(x))
       .collect();
     self
   }
-  pub fn filter(&mut self, conds: Vec<[String; 3]>) -> &mut Self {
+  pub fn filter(mut self, conds: Vec<[String; 3]>) -> Self {
     self.conds = conds.to_vec()
       .into_iter()
       .map(|[s, p, o]| [QueryUnit::from(s), QueryUnit::from(p), QueryUnit::from(o)])
