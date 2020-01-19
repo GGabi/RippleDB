@@ -44,7 +44,7 @@ impl Graph {
       slices: Vec::new(),
     }
   }
-  pub fn get(&self, query: &Sparql) -> () {
+  pub fn get(&self, query: &Sparql) -> Vec<String> {
     /* Assume only one variable */
     use std::collections::HashSet;
     use QueryUnit::{Var, Val};
@@ -60,7 +60,7 @@ impl Graph {
       [
         self.dict.get_by_right(&s).unwrap().to_string(),
         self.predicates.get_by_right(&p).unwrap().to_string(),
-        self.dict. get_by_right(&o).unwrap().to_string()
+        self.dict.get_by_right(&o).unwrap().to_string()
       ]
     };
     let var_pos = |cond: &[QueryUnit; 3]| {
@@ -87,39 +87,43 @@ impl Graph {
         _ => String::new(),
       }
     ).collect();
-    let var_pos_1 = var_pos(results[1].0);
-    let mut used_vars: HashSet<String> = HashSet::new();
-    let mut vars_to_remove: Vec<usize> = Vec::new();
-    for (i, res) in final_results.iter().enumerate() {
-      if !used_vars.contains(res) {
-        used_vars.insert(res.clone());
-        let filter_t = match var_pos_1 {
-          0 => [Some(res.clone()), None, None],
-          1 => [None, Some(res.clone()), None],
-          2 => [None, None, Some(res.clone())],
-          _ => [None, None, None],
-        };
-        if self.filter_triples_str(results[1].1.clone(), filter_t).len() == 0 {
-          //We have a match!
-          vars_to_remove.push(i);
+    for (query_triple, qt_results) in &results[1..] {
+      let qt_var_pos = var_pos(query_triple);
+      let mut used_vars_vals: HashSet<String> = HashSet::new();
+      let mut vars_vals_to_remove: Vec<usize> = Vec::new();
+      for (i, final_result) in final_results.iter().enumerate() {
+        if !used_vars_vals.contains(final_result) {
+          used_vars_vals.insert(final_result.clone());
+          let filter_t = match qt_var_pos {
+            0 => [Some(final_result.clone()), None, None],
+            1 => [None, Some(final_result.clone()), None],
+            2 => [None, None, Some(final_result.clone())],
+            _ => [None, None, None],
+          };
+          if self.filter_triples_str(qt_results.clone(), filter_t).len() == 0 {
+            /* There was no match for this value of the variable from final_results in
+            the query triple, so mark it to be removed at the end of this cycle */
+            vars_vals_to_remove.push(i);
+          }
         }
       }
-    }
-    final_results = final_results.into_iter().enumerate().filter_map(|(i, res)| {
-      if vars_to_remove.len() > 0 {
-        if i == vars_to_remove[0] {
-          vars_to_remove.remove(0);
-          None
+      final_results = final_results.into_iter().enumerate().filter_map(|(i, res)| {
+        if vars_vals_to_remove.len() > 0 {
+          if i == vars_vals_to_remove[0] {
+            vars_vals_to_remove.remove(0);
+            None
+          }
+          else {
+            Some(res)
+          }
         }
         else {
           Some(res)
         }
-      }
-      else {
-        Some(res)
-      }
-    }).collect();
-    dbg!(final_results);
+      }).collect();
+      
+    }
+    final_results
   }
   pub fn insert_triple(&mut self, val: Triple) -> Result<(), ()> {
     let col = match self.dict.get_by_left(&val[0]) {
@@ -136,7 +140,7 @@ impl Graph {
           if self.slices.len() > 0 {
             for slice in &mut self.slices {
               match slice {
-                Some(slice) if self.dict_max > slice.matrix_width() => {
+                Some(slice) if self.dict_max >= slice.matrix_width() => {
                   slice.grow();
                 },
                 _ => {}
@@ -161,7 +165,7 @@ impl Graph {
           if self.slices.len() > 0 {
             for slice in &mut self.slices {
               match slice {
-                Some(slice) if self.dict_max > slice.matrix_width() => {
+                Some(slice) if self.dict_max >= slice.matrix_width() => {
                   slice.grow();
                 },
                 _ => {}
@@ -475,13 +479,13 @@ impl Graph {
     triples.into_iter().filter(|[s, p, o]| {
       match &pattern {
         [Some(a), Some(b), Some(c)] => { s == a && p == b && o == c },
-        [None, Some(b), Some(c)] => { p == b && o == c },
-        [Some(a), None, Some(c)] => { s == a && o == c },
-        [Some(a), Some(b), None] => { s == a && p == b },
-        [None, None, Some(c)] => { o == c },
-        [None, Some(b), None] => { p == b },
-        [Some(a), None, None] => { s == a },
-        [None, None, None] => true,
+        [None, Some(b), Some(c)]    => { p == b && o == c },
+        [Some(a), None, Some(c)]    => { s == a && o == c },
+        [Some(a), Some(b), None]    => { s == a && p == b },
+        [None, None, Some(c)]       => { o == c },
+        [None, Some(b), None]       => { p == b },
+        [Some(a), None, None]       => { s == a },
+        [None, None, None]          => true,
       }
     }).collect()
   }
@@ -503,13 +507,13 @@ impl Graph {
   fn get_from_triple(&self, triple: [Option<String>; 3]) -> Vec<[usize; 3]> {
     match triple {
       [Some(s), Some(p), Some(o)] => self.spo(&s, &p, &o),
-      [None, Some(p), Some(o)] => self._po(&p, &o),
-      [Some(s), None, Some(o)] => self.s_o(&s, &o),
-      [Some(s), Some(p), None] => self.sp_(&s, &p),
-      [None, None, Some(o)] => self.__o(&o),
-      [None, Some(p), None] => self._p_(&p),
-      [Some(s), None, None] => self.s__(&s),
-      [None, None, None] => self.___(),
+      [None, Some(p), Some(o)]    => self._po(&p, &o),
+      [Some(s), None, Some(o)]    => self.s_o(&s, &o),
+      [Some(s), Some(p), None]    => self.sp_(&s, &p),
+      [None, None, Some(o)]       => self.__o(&o),
+      [None, Some(p), None]       => self._p_(&p),
+      [Some(s), None, None]       => self.s__(&s),
+      [None, None, None]          => self.___(),
     }
   }
   fn spo(&self, s: &str, p: &str, o: &str) -> Vec<[usize; 3]> {
@@ -712,32 +716,53 @@ mod unit_tests {
   use super::*;
   use std::path::MAIN_SEPARATOR as PATH_SEP;
   #[test]
-  fn query_test() {
+  fn get_0() {
     let mut g = Graph::new();
     g.insert_triple(["Gabe".into(), "likes".into(), "Rust".into()]);
-    g.insert_triple(["Gabe".into(), "likes".into(), "Chris".into()]);
-    g.insert_triple(["Gabe".into(), "likes".into(), "Ron".into()]);
-    g.insert_triple(["Gabe".into(), "hates".into(), "Js".into()]);
-    g.insert_triple(["Gabe".into(), "hates".into(), "Harry".into()]);
-    g.insert_triple(["Ron".into(), "is".into(), "malse".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Js".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Harry".into()]);
     g.insert_triple(["Scala".into(), "is".into(), "male".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Ron".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Chris".into()]);
+    g.insert_triple(["Ron".into(), "is".into(), "male".into()]);
     g.insert_triple(["Chris".into(), "is".into(), "male".into()]);
+    g.insert_triple(["Ron".into(), "isnt".into(), "rude".into()]);
+    g.insert_triple(["Chris".into(), "isnt".into(), "rude".into()]);
+    g.insert_triple(["Harry".into(), "isnt".into(), "rude".into()]);
     let query = Sparql::new()
       .select(vec!["$name".into()])
       .filter(vec![["Gabe".into(), "likes".into(), "$name".into()],
-        ["$name".into(), "is".into(), "male".into()]]
+        ["$name".into(), "is".into(), "male".into()],
+        ["$name".into(), "isnt".into(), "rude".into()]]
     );
-    g.get(&query);
+    assert_eq!(g.get(&query), vec![String::from("Ron"), "Chris".into()]);
+  }
+  #[test]
+  fn get_from_rdf_0() {
+    let g = Graph::from_rdf(&format!("models{}www-2011-complete.rdf", PATH_SEP)).unwrap();
+    let query = Sparql::new()
+      .select(vec!["$name".into()])
+      .filter(vec![[
+        "http://data.semanticweb.org/conference/www/2011/proceedings".into(),
+        "http://data.semanticweb.org/ns/swc/ontology#hasPart".into(),
+        "$name".into()],
+        ["http://data.semanticweb.org/person/iasonas-polakis".into(),
+        "http://xmlns.com/foaf/0.1/made".into(),
+        "$name".into()]]
+    );
+    let paper = g.get(&query);
+    assert_eq!(paper, vec![String::from("http://data.semanticweb.org/conference/www/2011/paper/we-b-the-web-of-short-urls")]);
   }
   #[test]
   fn from_rdf_0() {
-    Graph::from_rdf(&format!("models{}pref_labels.rdf", PATH_SEP));
+    assert!(Graph::from_rdf(&format!("models{}pref_labels.rdf", PATH_SEP)).is_ok());
   }
   #[test]
   fn from_rdf_async_0() {
     use futures::executor;
-    executor::block_on(
+    assert!(executor::block_on(
       Graph::from_rdf_async(&format!("models{}pref_labels.rdf", PATH_SEP))
+      ).is_ok()
     );
   }
 }

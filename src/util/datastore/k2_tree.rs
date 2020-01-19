@@ -2,8 +2,6 @@ extern crate bitvec;
 extern crate serde;
 extern crate rand;
 
-use rand::prelude::*;
-
 use bitvec::{prelude::bitvec, vec::BitVec};
 use serde::{
   Serialize,
@@ -23,17 +21,6 @@ pub struct K2Tree {
   stems: BitVec,
   stem_to_leaf: Vec<usize>,
   leaves: BitVec,
-}
-
-impl K2Tree {
-  pub fn heapsize(&self) -> usize {
-    let mut size: usize = std::mem::size_of_val(self);
-    size += std::mem::size_of::<usize>() * self.slayer_starts.len();
-    size += self.stems.len() / 8;
-    size += std::mem::size_of::<usize>() * self.stem_to_leaf.len();
-    size += self.leaves.len() / 8;
-    size
-  }
 }
 
 /* Public */
@@ -96,14 +83,14 @@ impl K2Tree {
   }
   pub fn get_row(&self, y: usize) -> Result<BitVec, ()> {
     let mut ret_v = BitVec::new();
-    for x in 0..self.matrix_width-1 {
+    for x in 0..self.matrix_width {
       ret_v.push(self.get(x, y)?);
     }
     Ok(ret_v)
   }
   pub fn get_column(&self, x: usize) -> Result<BitVec, ()> {
     let mut ret_v = BitVec::new();
-    for y in 0..self.matrix_width-1 {
+    for y in 0..self.matrix_width {
       ret_v.push(self.get(x, y)?);
     }
     Ok(ret_v)
@@ -676,6 +663,14 @@ impl K2Tree {
     let (stem_start, bit_offset) = self.parent(stem_start);
     stem_start + bit_offset
   }
+  pub fn heapsize(&self) -> usize {
+    let mut size: usize = std::mem::size_of_val(self);
+    size += std::mem::size_of::<usize>() * self.slayer_starts.len();
+    size += self.stems.len() / 8;
+    size += std::mem::size_of::<usize>() * self.stem_to_leaf.len();
+    size += self.leaves.len() / 8;
+    size
+  }
 }
 
 /* Utils */
@@ -729,6 +724,7 @@ fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
 #[cfg(test)]
 mod unit_tests {
   use super::*;
+  use rand::Rng;
   #[test]
   fn flood() {
     let mut tree = K2Tree::new();
