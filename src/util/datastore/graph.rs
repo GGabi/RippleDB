@@ -29,7 +29,8 @@ pub struct Graph {
   dict: BiBTreeMap<String, usize>,
   pred_tombstones: Vec<usize>,
   predicates: BiBTreeMap<String, usize>,
-  pub slices: Vec<Option<Box<K2Tree>>>,
+  slices: Vec<Option<Box<K2Tree>>>,
+  persist_location: Option<String>,
 }
 
 /* Public */
@@ -42,6 +43,7 @@ impl Graph {
       pred_tombstones: Vec::new(),
       predicates: BiBTreeMap::new(),
       slices: Vec::new(),
+      persist_location: None,
     }
   }
   pub fn get(&self, query: &Sparql) -> Vec<String> {
@@ -407,6 +409,7 @@ impl Graph {
       pred_tombstones: Vec::new(),
       predicates: predicates,
       slices: slices,
+      persist_location: None,
     })
   }
   pub async fn from_rdf_async(path: &str) -> Result<Self, ()> {
@@ -463,21 +466,15 @@ impl Graph {
       pred_tombstones: Vec::new(),
       predicates: predicates,
       slices: trees,
+      persist_location: None,
     })
   }
-  pub fn persist_to(&self, path: &str) -> Result<(), std::io::Error> {
-
-    /* Directory for everything to be saved under */
-    let graph_dir = std::path::Path::new(path);
-
-    if !graph_dir.is_dir() {
-      std::fs::create_dir(&graph_dir)?;
-    }
-
-    let head_file = graph_dir.join("head.json");
-
-    /* Start saving stuff */
-    /* Only want to use this trait in this func, not public */
+  /*For even greater building performance get it to build the trees in the background and saved to files
+    If the predicate isn't built yet on query, go build it, otherwise finish building the rest. */
+  pub fn persist_to(&mut self, path: &str) -> Result<(), std::io::Error> {
+    /* Only want to use this trait in this func, not public as it's not really
+    "serializing" the Graph and would be confusing to users if the trait was
+    publicly implemented */
     impl Serialize for Graph {
       fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut state = serializer.serialize_struct("K2Tree", 7)?;
@@ -489,26 +486,46 @@ impl Graph {
         state.end()
       }
     }
+    /* Define locations to persist to */
+    let root_dir = std::path::Path::new(path);
+    let trees_dir = root_dir.join("trees");
+    let head_file = root_dir.join("head.json");
 
-    /* Create Head file */
+    if root_dir.is_dir() {
+      /* If the folder already exists then either:
+       - It's being used by another process
+       - This Graph has already been saved here
+      In both cases we don't wanna disturb this location. */
+      // return Err("Dir already exists")
+      return Ok(())
+    }
+
+    /* If we good then create root/, root/trees/ and root/head.json which
+    containing surface info on Graph. (Dict contents etc.) */
+    std::fs::create_dir(&root_dir)?;
+    std::fs::create_dir(&trees_dir)?;
     std::fs::File::create(&head_file)?;
     std::fs::write(head_file, serde_json::to_string(self)?)?;
 
-    /* Create trees subdir and save K2Trees to it */
-    std::fs::create_dir(&graph_dir.join("trees"))?;
-    let trees_dir = graph_dir.join("trees");
+    /* Serialise each K2Tree and save to a json file in root/trees/,
+    Name each K2Tree's file after it's corresponding's predicate's
+    rhs value in self.predicates to aid reconstruction in future */
     for (i, slice) in self.slices.iter().enumerate() {
       if let Some(k2_tree) = slice {
-        let tree_file = trees_dir.join(format!("{}.json", i.to_string()));
+        let tree_file = trees_dir.join(format!("{}.json", i));
         std::fs::File::create(&tree_file)?;
         std::fs::write(tree_file, k2_tree.to_json()?)?;
       }
     }
 
+    /* Save the location this Graph is now persisted to */
+    self.persist_location = Some(path.to_string());
+
     Ok(())
   }
-  /*For even greater building performance get it to build the trees in the background and saved to files
-    If the predicate isn't built yet on query, go build it, otherwise finish building the rest. */
+  pub fn persist_location(&self) -> Option<String> {
+    self.persist_location.clone()
+  }
 }
 
 /* Iterators */
