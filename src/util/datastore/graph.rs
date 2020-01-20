@@ -5,7 +5,7 @@ extern crate futures;
 
 use bimap::BiBTreeMap;
 use bitvec::vec::BitVec;
-use serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize, ser::SerializeStruct};
 
 use crate::util::{
   Triple,
@@ -465,6 +465,48 @@ impl Graph {
       slices: trees,
     })
   }
+  pub fn persist_to(&self, path: &str) -> Result<(), std::io::Error> {
+
+    /* Directory for everything to be saved under */
+    let graph_dir = std::path::Path::new(path);
+
+    if !graph_dir.is_dir() {
+      std::fs::create_dir(&graph_dir)?;
+    }
+
+    let head_file = graph_dir.join("head.json");
+
+    /* Start saving stuff */
+    /* Only want to use this trait in this func, not public */
+    impl Serialize for Graph {
+      fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut state = serializer.serialize_struct("K2Tree", 7)?;
+        state.serialize_field("dict_max", &self.dict_max)?;
+        state.serialize_field("dict_tombstones", &self.dict_tombstones)?;
+        state.serialize_field("dict", &self.dict.iter().collect() as &Vec<(&String, &usize)>)?;
+        state.serialize_field("pred_tombstones", &self.pred_tombstones)?;
+        state.serialize_field("predicates", &self.predicates.iter().collect() as &Vec<(&String, &usize)>)?;
+        state.end()
+      }
+    }
+
+    /* Create Head file */
+    std::fs::File::create(&head_file)?;
+    std::fs::write(head_file, serde_json::to_string(self)?)?;
+
+    /* Create trees subdir and save K2Trees to it */
+    std::fs::create_dir(&graph_dir.join("trees"))?;
+    let trees_dir = graph_dir.join("trees");
+    for (i, slice) in self.slices.iter().enumerate() {
+      if let Some(k2_tree) = slice {
+        let tree_file = trees_dir.join(format!("{}.json", i.to_string()));
+        std::fs::File::create(&tree_file)?;
+        std::fs::write(tree_file, k2_tree.to_json()?)?;
+      }
+    }
+
+    Ok(())
+  }
   /*For even greater building performance get it to build the trees in the background and saved to files
     If the predicate isn't built yet on query, go build it, otherwise finish building the rest. */
 }
@@ -764,5 +806,21 @@ mod unit_tests {
       Graph::from_rdf_async(&format!("models{}pref_labels.rdf", PATH_SEP))
       ).is_ok()
     );
+  }
+  #[test]
+  fn persist_to_0() {
+    let mut g = Graph::new();
+    g.insert_triple(["Gabe".into(), "likes".into(), "Rust".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Js".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Harry".into()]);
+    g.insert_triple(["Scala".into(), "is".into(), "male".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Ron".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Chris".into()]);
+    g.insert_triple(["Ron".into(), "is".into(), "male".into()]);
+    g.insert_triple(["Chris".into(), "is".into(), "male".into()]);
+    g.insert_triple(["Ron".into(), "isnt".into(), "rude".into()]);
+    g.insert_triple(["Chris".into(), "isnt".into(), "rude".into()]);
+    g.insert_triple(["Harry".into(), "isnt".into(), "rude".into()]);
+    // dbg!(g.persist_to("C:\\temp\\persist_test"));
   }
 }
