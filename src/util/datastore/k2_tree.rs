@@ -7,7 +7,9 @@ use serde::{
   Serialize,
   Deserialize,
   Serializer,
-  ser::SerializeStruct
+  Deserializer,
+  ser::SerializeStruct,
+  de::{self, Visitor, MapAccess}
 };
 
 pub type BitMatrix = Vec<BitVec>;
@@ -363,8 +365,15 @@ impl K2Tree {
     Ok(tree)
   }
   /* Serialization / Deserialization */
-  pub fn to_json(&self) { unimplemented!() }
-  pub fn into_json(self) { unimplemented!() }
+  pub fn to_json(&self) -> Result<String, serde_json::Error> {
+    serde_json::to_string(self)
+  }
+  pub fn into_json(self) -> Result<String, serde_json::Error> {
+    serde_json::to_string(&self)
+  }
+  pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
+    serde_json::from_str::<Self>(json)
+  }
 }
 
 /* Iterators */
@@ -534,9 +543,115 @@ impl Serialize for K2Tree {
     let mut state = serializer.serialize_struct("K2Tree", 7)?;
     state.serialize_field("matrix_width", &self.matrix_width)?;
     state.serialize_field("k", &self.k)?;
-    state.serialize_field("stems", &self.stems.clone().into_vec())?;
-    state.serialize_field("leaves", &self.leaves.clone().into_vec())?;
+    state.serialize_field("max_stem_layers", &self.max_slayers)?;
+    state.serialize_field("stem_layer_starts", &self.slayer_starts)?;
+    state.serialize_field("stems", &self.stems.clone().into_vec() as &Vec<u8>)?;
+    state.serialize_field("stem_to_leaf", &self.stem_to_leaf)?;
+    state.serialize_field("leaves", &self.leaves.clone().into_vec() as &Vec<u8>)?;
     state.end()
+  }
+}
+impl<'de> Deserialize<'de> for K2Tree {
+  fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(field_identifier, rename_all = "lowercase")]
+    enum Field {
+      Matrix_Width,
+      K,
+      Max_Stem_Layers,
+      Stem_Layer_Starts,
+      Stems,
+      Stem_To_Leaf,
+      Leaves
+    }
+    struct K2TreeVisitor;
+    impl<'de> Visitor<'de> for K2TreeVisitor {
+      type Value = K2Tree;
+      fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("struct K2Tree")
+      }
+      fn visit_map<V: MapAccess<'de>>(self, mut map: V) -> Result<K2Tree, V::Error> {
+        let mut m_width = None;
+        let mut k = None;
+        let mut max_slayers = None;
+        let mut slayer_starts = None;
+        let mut stems = None;
+        let mut stem_to_leaf = None;
+        let mut leaves = None;
+        while let Some(key) = map.next_key()? {
+          match key {
+            Field::Matrix_Width => {
+                if m_width.is_some() {
+                    return Err(de::Error::duplicate_field("matrix_width"));
+                }
+                m_width = Some(map.next_value()?);
+            }
+            Field::K => {
+              if k.is_some() {
+                  return Err(de::Error::duplicate_field("k"));
+              }
+              k = Some(map.next_value()?);
+            }
+            Field::Max_Stem_Layers => {
+              if max_slayers.is_some() {
+                  return Err(de::Error::duplicate_field("max_stem_layer"));
+              }
+              max_slayers = Some(map.next_value()?);
+            }
+            Field::Stem_Layer_Starts => {
+              if slayer_starts.is_some() {
+                  return Err(de::Error::duplicate_field("stem_layer_starts"));
+              }
+              slayer_starts = Some(map.next_value()?);
+            }
+            Field::Stems => {
+              if stems.is_some() {
+                return Err(de::Error::duplicate_field("stems"));
+              }
+              stems = Some(BitVec::from(map.next_value::<Vec<u8>>()?));
+            }
+            Field::Stem_To_Leaf => {
+              if stem_to_leaf.is_some() {
+                return Err(de::Error::duplicate_field("stem_to_leaf"));
+              }
+              stem_to_leaf = Some(map.next_value()?);
+            }
+            Field::Leaves => {
+              if leaves.is_some() {
+                return Err(de::Error::duplicate_field("leaves"));
+              }
+              leaves = Some(BitVec::from(map.next_value::<Vec<u8>>()?));
+            }
+          }
+        }
+        let m_width = m_width.ok_or_else(|| de::Error::missing_field("matrix_width"))?;
+        let k = k.ok_or_else(|| de::Error::missing_field("k"))?;
+        let max_slayers = max_slayers.ok_or_else(|| de::Error::missing_field("max_stem_layers"))?;
+        let slayer_starts = slayer_starts.ok_or_else(|| de::Error::missing_field("stem_layer_starts"))?;
+        let stems = stems.ok_or_else(|| de::Error::missing_field("stems"))?;
+        let stem_to_leaf = stem_to_leaf.ok_or_else(|| de::Error::missing_field("stem_to_leaf"))?;
+        let leaves = leaves.ok_or_else(|| de::Error::missing_field("leaves"))?;
+        Ok(K2Tree {
+          matrix_width: m_width,
+          k: k,
+          max_slayers: max_slayers,
+          slayer_starts: slayer_starts,
+          stems: stems,
+          stem_to_leaf: stem_to_leaf,
+          leaves: leaves
+        })
+      }
+    }
+    const FIELDS: &'static [&'static str] = &[
+      "matrix_width",
+      "k",
+      "max_stem_layers",
+      "stem_layer_starts",
+      "stems",
+      "stem_to_leaf",
+      "leaves"
+    ];
+    deserializer.deserialize_struct("K2Tree", FIELDS, K2TreeVisitor)
   }
 }
 
@@ -725,6 +840,13 @@ fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
 mod unit_tests {
   use super::*;
   use rand::Rng;
+  #[test]
+  fn to_from_json_0() {
+    let tree = K2Tree::test_tree();
+    let json = tree.to_json().unwrap();
+    let from_json_tree = K2Tree::from_json(&json).unwrap();
+    assert_eq!(tree, from_json_tree);
+  }
   #[test]
   fn flood() {
     let mut tree = K2Tree::new();
