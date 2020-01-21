@@ -5,7 +5,12 @@ extern crate futures;
 
 use bimap::BiBTreeMap;
 use bitvec::vec::BitVec;
-use serde::{Serialize, Deserialize, ser::SerializeStruct};
+use serde::{
+  Serialize,
+  Deserialize,
+  ser::SerializeStruct,
+  de::{self, Visitor, MapAccess}
+};
 
 use crate::util::{
   Triple,
@@ -46,6 +51,287 @@ impl Graph {
       persist_location: None,
     }
   }
+  pub fn from_backup(path: &str) -> Result<Self, std::io::Error> {
+    /* Private trait impl */
+    impl<'de> Deserialize<'de> for Graph {
+      fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(field_identifier, rename_all = "lowercase")]
+        enum Field {
+          Dict_Max,
+          Dict_Tombstones,
+          Dict,
+          Pred_Tombstones,
+          Predicates,
+          Persist_Location
+        }
+        struct GraphVisitor;
+        impl<'de> Visitor<'de> for GraphVisitor {
+          type Value = Graph;
+          fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("struct Graph")
+          }
+          fn visit_map<V: MapAccess<'de>>(self, mut map: V) -> Result<Graph, V::Error> {
+            let mut dict_max = None;
+            let mut dict_tombstones = None;
+            let mut dict = None;
+            let mut pred_tombstones = None;
+            let mut predicates = None;
+            let mut persist_location = None;
+            while let Some(key) = map.next_key()? {
+              match key {
+                Field::Dict_Max => {
+                  if dict_max.is_some() {
+                      return Err(de::Error::duplicate_field("dict_max"));
+                  }
+                  dict_max = Some(map.next_value()?);
+                }
+                Field::Dict_Tombstones => {
+                  if dict_tombstones.is_some() {
+                    return Err(de::Error::duplicate_field("dict_tombstones"));
+                  }
+                  dict_tombstones = Some(map.next_value()?);
+                }
+                Field::Dict => {
+                  if dict.is_some() {
+                    return Err(de::Error::duplicate_field("dict"));
+                  }
+                  dict = Some(map.next_value::<Vec<(String, usize)>>()?);
+                }
+                Field::Pred_Tombstones => {
+                  if pred_tombstones.is_some() {
+                      return Err(de::Error::duplicate_field("pred_tombstones"));
+                  }
+                  pred_tombstones = Some(map.next_value()?);
+                }
+                Field::Predicates => {
+                  if predicates.is_some() {
+                    return Err(de::Error::duplicate_field("predicates"));
+                  }
+                  predicates = Some(map.next_value::<Vec<(String, usize)>>()?);
+                }
+                Field::Persist_Location => {
+                  if persist_location.is_some() {
+                    return Err(de::Error::duplicate_field("persist_location"));
+                  }
+                  persist_location = Some(map.next_value()?);
+                }
+              }
+            }
+            let dict_max = dict_max.ok_or_else(|| de::Error::missing_field("dict_max"))?;
+            let dict_tombstones = dict_tombstones.ok_or_else(|| de::Error::missing_field("dict_tombstones"))?;
+            let dict = dict.ok_or_else(|| de::Error::missing_field("dict"))?;
+            let pred_tombstones = pred_tombstones.ok_or_else(|| de::Error::missing_field("pred_tombstones"))?;
+            let predicates = predicates.ok_or_else(|| de::Error::missing_field("predicates"))?;
+            let persist_location = persist_location.ok_or_else(|| de::Error::missing_field("persist_location"))?;
+            
+            let mut final_dict: BiBTreeMap<String, usize> = BiBTreeMap::new();
+            for (key, val) in dict.into_iter() {
+              final_dict.insert(key, val);
+            }
+            let mut final_preds: BiBTreeMap<String, usize> = BiBTreeMap::new();
+            for (key, val) in predicates.into_iter() {
+              final_preds.insert(key, val);
+            }
+
+            Ok(Graph {
+              dict_max: dict_max,
+              dict_tombstones: dict_tombstones,
+              dict: final_dict,
+              pred_tombstones: pred_tombstones,
+              predicates: final_preds,
+              slices: Vec::new(),
+              persist_location: persist_location
+            })
+          }
+        }
+        const FIELDS: &'static [&'static str] = &[
+          "dict_max",
+          "dict_tombstones",
+          "dict",
+          "pred_tombstones",
+          "predicates",
+          "persist_location"
+        ];
+        deserializer.deserialize_struct("Graph", FIELDS, GraphVisitor)
+      }
+    }
+    /* Closure definitions */
+    let read_json = |path_to_file: &std::path::Path| -> Result<String, std::io::Error> {
+      use std::io::Read;
+      let mut buf = String::new();
+      std::fs::File::open(path_to_file)?.read_to_string(&mut buf)?;
+      Ok(buf)
+    };
+    /* Function start */
+    /* Define key filesystem locations */
+    let root_dir = std::path::Path::new(path);
+    let trees_dir = root_dir.join("trees");
+    let head_file = root_dir.join("head.json");
+    /* Check that all files and dirs actually exist */
+    if !root_dir.is_dir()
+    || !trees_dir.is_dir()
+    || !head_file.is_file() { /* Oof */ }
+    /* Build surface level of the Graph from root/head.json */
+    let Graph {
+      dict_max: dict_max,
+      dict_tombstones: dict_tombstones,
+      dict: dict,
+      pred_tombstones: pred_tombstones,
+      predicates: predicates,
+      slices: _,
+      persist_location: _
+    } = serde_json::from_str::<Graph>(&read_json(&head_file)?)?;
+
+    /* Build K2Trees from json files in root/trees/ */
+    let mut slices: Vec<Option<Box<K2Tree>>> = Vec::new();
+    for i in 0.. {
+      if let Some(_) = predicates.get_by_right(&i) {
+        let tree_json = read_json(&trees_dir.join(format!("{}.json", i)))?;
+        slices.push(Some(Box::new(K2Tree::from_json(&tree_json)?)));
+      }
+      else if pred_tombstones.contains(&i) {
+        slices.push(None);
+      }
+      else {
+        break
+      }
+    }
+
+    Ok(Graph {
+      dict_max: dict_max,
+      dict_tombstones: dict_tombstones,
+      dict: dict,
+      pred_tombstones: pred_tombstones,
+      predicates: predicates,
+      slices: slices,
+      persist_location: Some(path.to_string()),
+    })
+  }
+  pub fn from_rdf(path: &str) -> Result<Self, ()> {
+    use crate::util::rdf::parser::ParsedTriples;
+    use std::{thread, sync::{Mutex, Arc}};
+    /* Parse the .rdf file and initialise fields all
+    the Graph's fields except for slices */
+    let ParsedTriples {
+      dict_max,
+      dict,
+      pred_max: _,
+      predicates,
+      triples: _,
+      partitioned_triples,
+    } = match ParsedTriples::from_rdf(path) {
+      Ok(p_trips) => p_trips,
+      Err(e) => return Err(()),
+    };
+    /* Build each K2Tree in parallel */
+    let trees = Arc::new(Mutex::new(Vec::new()));
+    let mut handles = Vec::new();
+    for i in 0..partitioned_triples.len() {
+      trees.lock().unwrap().push(Err(()));
+      let doubles = partitioned_triples[i].clone();
+      let trees = Arc::clone(&trees);
+      handles.push(thread::spawn(move || {
+        let mut tree = K2Tree::new();
+        while tree.matrix_width() < dict_max {
+          tree.grow();
+        }
+        for [x, y] in doubles {
+          if let Err(_) = tree.set(x, y, true) {
+            return
+          }
+        }
+        trees.lock().unwrap()[i] = Ok(tree);
+      }));
+    }
+    for handle in handles { handle.join().unwrap(); }
+    /* Check if every slice was built successfully and 
+    inserts each one into the correct location in the Graph's
+    slices field */
+    let mut slices: Vec<Option<Box<K2Tree>>> = Vec::new();
+    for tree_result in Arc::try_unwrap(trees)
+      .unwrap()
+      .into_inner()
+      .unwrap()
+      .into_iter() {
+      if let Ok(tree) = tree_result {
+        slices.push(Some(Box::new(tree)));
+      }
+      else {
+        /* One of the K2Trees failed to build so
+        Graph integrity is compromised: abort */
+        return Err(())
+      }
+    }
+    Ok(Graph {
+      dict_max: dict_max,
+      dict_tombstones: Vec::new(),
+      dict: dict,
+      pred_tombstones: Vec::new(),
+      predicates: predicates,
+      slices: slices,
+      persist_location: None,
+    })
+  }
+  pub async fn from_rdf_async(path: &str) -> Result<Self, ()> {
+    use crate::util::rdf::parser::ParsedTriples;
+    use futures::{StreamExt, stream::FuturesOrdered};
+    /* Parse the .rdf file and initialise fields all
+    the Graph's fields except for slices */
+    let ParsedTriples {
+      dict_max,
+      dict,
+      pred_max: _,
+      predicates,
+      triples: _,
+      partitioned_triples,
+    } = match ParsedTriples::from_rdf(path) {
+      Ok(p_trips) => p_trips,
+      Err(_) => return Err(()),
+    };
+    /* Build each K2Tree concurrently on one thread */
+    let mut tree_futs = FuturesOrdered::new();
+    for i in 0..partitioned_triples.len() {
+      let doubles = partitioned_triples[i].clone();
+      tree_futs.push(async move {
+        let mut tree = K2Tree::new();
+        while tree.matrix_width() < dict_max {
+          tree.grow();
+        }
+        for [x, y] in doubles {
+          if let Err(_) = tree.set(x, y, true) {
+            return Err(())
+          }
+        }
+        Ok(tree)
+      });
+    }
+    /* Check if every slice was built successfully and 
+    inserts each one into the correct location in the Graph's
+    slices field */
+    let mut trees = Vec::new();
+    while let Some(fut_result) = tree_futs.next().await {
+      if let Ok(tree) = fut_result {
+        trees.push(Some(Box::new(tree)));
+      }
+      else {
+        /* One of the K2Trees failed to build so
+        Graph integrity is compromised: abort */
+        return Err(())
+      }
+    }
+    Ok(Graph {
+      dict_max: dict_max,
+      dict_tombstones: Vec::new(),
+      dict: dict,
+      pred_tombstones: Vec::new(),
+      predicates: predicates,
+      slices: trees,
+      persist_location: None,
+    })
+  }
+  /*For even greater building performance get it to build the trees in the background and saved to files
+    If the predicate isn't built yet on query, go build it, otherwise finish building the rest. */
   pub fn get(&self, query: &Sparql) -> Vec<String> {
     /* Assume only one variable */
     use std::collections::HashSet;
@@ -347,142 +633,20 @@ impl Graph {
     }
     Ok(())
   }
-  pub fn from_rdf(path: &str) -> Result<Self, ()> {
-    use crate::util::rdf::parser::ParsedTriples;
-    use std::{thread, sync::{Mutex, Arc}};
-    /* Parse the .rdf file and initialise fields all
-    the Graph's fields except for slices */
-    let ParsedTriples {
-      dict_max,
-      dict,
-      pred_max: _,
-      predicates,
-      triples: _,
-      partitioned_triples,
-    } = match ParsedTriples::from_rdf(path) {
-      Ok(p_trips) => p_trips,
-      Err(e) => return Err(()),
-    };
-    /* Build each K2Tree in parallel */
-    let trees = Arc::new(Mutex::new(Vec::new()));
-    let mut handles = Vec::new();
-    for i in 0..partitioned_triples.len() {
-      trees.lock().unwrap().push(Err(()));
-      let doubles = partitioned_triples[i].clone();
-      let trees = Arc::clone(&trees);
-      handles.push(thread::spawn(move || {
-        let mut tree = K2Tree::new();
-        while tree.matrix_width() < dict_max {
-          tree.grow();
-        }
-        for [x, y] in doubles {
-          if let Err(_) = tree.set(x, y, true) {
-            return
-          }
-        }
-        trees.lock().unwrap()[i] = Ok(tree);
-      }));
-    }
-    for handle in handles { handle.join().unwrap(); }
-    /* Check if every slice was built successfully and 
-    inserts each one into the correct location in the Graph's
-    slices field */
-    let mut slices: Vec<Option<Box<K2Tree>>> = Vec::new();
-    for tree_result in Arc::try_unwrap(trees)
-      .unwrap()
-      .into_inner()
-      .unwrap()
-      .into_iter() {
-      if let Ok(tree) = tree_result {
-        slices.push(Some(Box::new(tree)));
-      }
-      else {
-        /* One of the K2Trees failed to build so
-        Graph integrity is compromised: abort */
-        return Err(())
-      }
-    }
-    Ok(Graph {
-      dict_max: dict_max,
-      dict_tombstones: Vec::new(),
-      dict: dict,
-      pred_tombstones: Vec::new(),
-      predicates: predicates,
-      slices: slices,
-      persist_location: None,
-    })
-  }
-  pub async fn from_rdf_async(path: &str) -> Result<Self, ()> {
-    use crate::util::rdf::parser::ParsedTriples;
-    use futures::{StreamExt, stream::FuturesOrdered};
-    /* Parse the .rdf file and initialise fields all
-    the Graph's fields except for slices */
-    let ParsedTriples {
-      dict_max,
-      dict,
-      pred_max: _,
-      predicates,
-      triples: _,
-      partitioned_triples,
-    } = match ParsedTriples::from_rdf(path) {
-      Ok(p_trips) => p_trips,
-      Err(_) => return Err(()),
-    };
-    /* Build each K2Tree concurrently on one thread */
-    let mut tree_futs = FuturesOrdered::new();
-    for i in 0..partitioned_triples.len() {
-      let doubles = partitioned_triples[i].clone();
-      tree_futs.push(async move {
-        let mut tree = K2Tree::new();
-        while tree.matrix_width() < dict_max {
-          tree.grow();
-        }
-        for [x, y] in doubles {
-          if let Err(_) = tree.set(x, y, true) {
-            return Err(())
-          }
-        }
-        Ok(tree)
-      });
-    }
-    /* Check if every slice was built successfully and 
-    inserts each one into the correct location in the Graph's
-    slices field */
-    let mut trees = Vec::new();
-    while let Some(fut_result) = tree_futs.next().await {
-      if let Ok(tree) = fut_result {
-        trees.push(Some(Box::new(tree)));
-      }
-      else {
-        /* One of the K2Trees failed to build so
-        Graph integrity is compromised: abort */
-        return Err(())
-      }
-    }
-    Ok(Graph {
-      dict_max: dict_max,
-      dict_tombstones: Vec::new(),
-      dict: dict,
-      pred_tombstones: Vec::new(),
-      predicates: predicates,
-      slices: trees,
-      persist_location: None,
-    })
-  }
-  /*For even greater building performance get it to build the trees in the background and saved to files
-    If the predicate isn't built yet on query, go build it, otherwise finish building the rest. */
+  
   pub fn persist_to(&mut self, path: &str) -> Result<(), std::io::Error> {
     /* Only want to use this trait in this func, not public as it's not really
     "serializing" the Graph and would be confusing to users if the trait was
     publicly implemented */
     impl Serialize for Graph {
       fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut state = serializer.serialize_struct("K2Tree", 7)?;
+        let mut state = serializer.serialize_struct("Graph", 6)?;
         state.serialize_field("dict_max", &self.dict_max)?;
         state.serialize_field("dict_tombstones", &self.dict_tombstones)?;
         state.serialize_field("dict", &self.dict.iter().collect() as &Vec<(&String, &usize)>)?;
         state.serialize_field("pred_tombstones", &self.pred_tombstones)?;
         state.serialize_field("predicates", &self.predicates.iter().collect() as &Vec<(&String, &usize)>)?;
+        state.serialize_field("persist_location", &self.persist_location)?;
         state.end()
       }
     }
@@ -499,6 +663,9 @@ impl Graph {
       // return Err("Dir already exists")
       return Ok(())
     }
+
+    /* Save the location this Graph is persisted to */
+    self.persist_location = Some(root_dir.to_str().unwrap().to_string());
 
     /* If we good then create root/, root/trees/ and root/head.json which
     containing surface info on Graph. (Dict contents etc.) */
@@ -517,9 +684,6 @@ impl Graph {
         std::fs::write(tree_file, k2_tree.to_json()?)?;
       }
     }
-
-    /* Save the location this Graph is now persisted to */
-    self.persist_location = Some(path.to_string());
 
     Ok(())
   }
@@ -838,6 +1002,24 @@ mod unit_tests {
     g.insert_triple(["Ron".into(), "isnt".into(), "rude".into()]);
     g.insert_triple(["Chris".into(), "isnt".into(), "rude".into()]);
     g.insert_triple(["Harry".into(), "isnt".into(), "rude".into()]);
-    // dbg!(g.persist_to("C:\\temp\\persist_test"));
+    dbg!(g.persist_to("C:\\temp\\persist_test"));
+  }
+  #[test]
+  fn from_backup_0() {
+    let mut g = Graph::new();
+    g.insert_triple(["Gabe".into(), "likes".into(), "Rust".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Js".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Harry".into()]);
+    g.insert_triple(["Scala".into(), "is".into(), "male".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Ron".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Chris".into()]);
+    g.insert_triple(["Ron".into(), "is".into(), "male".into()]);
+    g.insert_triple(["Chris".into(), "is".into(), "male".into()]);
+    g.insert_triple(["Ron".into(), "isnt".into(), "rude".into()]);
+    g.insert_triple(["Chris".into(), "isnt".into(), "rude".into()]);
+    g.insert_triple(["Harry".into(), "isnt".into(), "rude".into()]);
+    let path = "C:\\temp\\persist_test";
+    g.persist_to(path);
+    assert_eq!(Graph::from_backup(path).unwrap(), g);
   }
 }
