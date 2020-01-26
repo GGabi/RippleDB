@@ -2,6 +2,7 @@ extern crate bimap;
 extern crate bitvec;
 extern crate serde;
 extern crate futures;
+extern crate num_cpus;
 
 use bimap::BiBTreeMap;
 use bitvec::vec::BitVec;
@@ -17,6 +18,8 @@ use crate::util::{
   datastore::k2_tree::K2Tree,
   rdf::query::{Sparql, QueryUnit}
 };
+
+use std::{thread, sync::{Mutex, Arc}};
 
 /* Subjects and Objects are mapped in the same
      collection to a unique int while Predicates
@@ -168,10 +171,12 @@ impl Graph {
     let root_dir = std::path::Path::new(path);
     let trees_dir = root_dir.join("trees");
     let head_file = root_dir.join("head.json");
+    let dot_file = root_dir.join(".ripplebackup");
     /* Check that all files and dirs actually exist */
     if !root_dir.is_dir()
     || !trees_dir.is_dir()
-    || !head_file.is_file() { /* Oof */ }
+    || !head_file.is_file()
+    || !dot_file.is_file() { /* Oof */ }
     /* Build surface level of the Graph from root/head.json */
     let Graph {
       dict_max: dict_max,
@@ -327,6 +332,114 @@ impl Graph {
       pred_tombstones: Vec::new(),
       predicates: predicates,
       slices: trees,
+      persist_location: None,
+    })
+  }
+  async fn build_tree(pos: usize,
+    trees: &Arc<Mutex<Vec<Option<Box<K2Tree>>>>>,
+    triples: &Arc<Mutex<Vec<Vec<[usize; 2]>>>>,
+    dict_max: usize) {
+    let doubles = &triples.lock().unwrap()[pos];
+    let mut tree = K2Tree::new();
+    while tree.matrix_width() < dict_max {
+      tree.grow();
+    }
+    for &[x, y] in doubles {
+      if let Err(_) = tree.set(x, y, true) {
+        return
+      }
+    }
+    trees.lock().unwrap()[pos] = Some(Box::new(tree));
+  }
+  pub async fn from_rdf_better(path: &str) -> Result<Self, &str> {
+    use futures::executor;
+    use crate::util::rdf::parser::ParsedTriples;
+    use std::{thread, sync::{Mutex, Arc}};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use futures::{StreamExt, stream::FuturesUnordered};
+    /* Parse the .rdf file and initialise fields all
+    the Graph's fields except for slices */
+    let ParsedTriples {
+      dict_max,
+      dict,
+      pred_max: _,
+      predicates,
+      triples: _,
+      partitioned_triples,
+    } = match ParsedTriples::from_rdf(path) {
+      Ok(p_trips) => p_trips,
+      Err(e) => return Err("error parsing triples"),
+    };
+    /* Build each K2Tree in parallel */
+    let triples_len = partitioned_triples.len();
+    let triples = Arc::new(Mutex::new(partitioned_triples));
+    let counter = Arc::new(AtomicUsize::new(0));
+    let trees: Arc<Mutex<Vec<Option<Box<K2Tree>>>>> = Arc::new(
+      Mutex::new(vec![None; triples_len])
+    );
+    let build_tree = Arc::new(
+      |pos: usize,
+      trees: &Arc<Mutex<Vec<Option<Box<K2Tree>>>>>,
+      triples: &Arc<Mutex<Vec<Vec<[usize; 2]>>>>,
+      dict_max: usize| {
+        let doubles = &triples.lock().unwrap()[pos];
+        let mut tree = K2Tree::new();
+        while tree.matrix_width() < dict_max {
+          tree.grow();
+        }
+        for &[x, y] in doubles {
+          if let Err(_) = tree.set(x, y, true) {
+            return
+          }
+        }
+        trees.lock().unwrap()[pos] = Some(Box::new(tree));
+      }
+    );
+    /* God this is trash rewrite the whole thing lmaooooo */
+    let mut handles = Vec::new();
+    dbg!(num_cpus::get());
+    for _ in 0..num_cpus::get()*2 {
+      let build_tree = Arc::clone(&build_tree);
+      let counter = Arc::clone(&counter);
+      let trees = Arc::clone(&trees);
+      let triples = Arc::clone(&triples);
+      let dict_max = dict_max;
+      handles.push(thread::spawn(move || executor::block_on(async {
+          let mut futs = FuturesUnordered::new();
+          let mut counter_val = counter.fetch_add(1, Ordering::Relaxed);
+          while counter_val < triples_len {
+            futs.push(Self::build_tree(counter_val, &trees, &triples, dict_max));
+            counter_val = counter.fetch_add(1, Ordering::Relaxed)
+          }
+          while let Some(fut_result) = futs.next().await {};
+      })));
+    }
+    for handle in handles { handle.join().unwrap(); }
+    /* Check if every slice was built successfully and 
+    inserts each one into the correct location in the Graph's
+    slices field */
+    let mut slices: Vec<Option<Box<K2Tree>>> = Vec::new();
+    for tree in Arc::try_unwrap(trees)
+      .unwrap()
+      .into_inner()
+      .unwrap()
+      .into_iter() {
+      if let Some(tree) = tree {
+        slices.push(Some(tree));
+      }
+      else {
+        /* One of the K2Trees failed to build so
+        Graph integrity is compromised: abort */
+        return Err("one of the trees died")
+      }
+    }
+    Ok(Graph {
+      dict_max: dict_max,
+      dict_tombstones: Vec::new(),
+      dict: dict,
+      pred_tombstones: Vec::new(),
+      predicates: predicates,
+      slices: slices,
       persist_location: None,
     })
   }
@@ -633,7 +746,6 @@ impl Graph {
     }
     Ok(())
   }
-  
   pub fn persist_to(&mut self, path: &str) -> Result<(), std::io::Error> {
     /* Only want to use this trait in this func, not public as it's not really
     "serializing" the Graph and would be confusing to users if the trait was
@@ -654,6 +766,7 @@ impl Graph {
     let root_dir = std::path::Path::new(path);
     let trees_dir = root_dir.join("trees");
     let head_file = root_dir.join("head.json");
+    let dot_file = root_dir.join(".ripplebackup");
 
     if root_dir.is_dir() {
       /* If the folder already exists then either:
@@ -663,7 +776,7 @@ impl Graph {
       // return Err("Dir already exists")
       return Ok(())
     }
-
+    
     /* Save the location this Graph is persisted to */
     self.persist_location = Some(root_dir.to_str().unwrap().to_string());
 
@@ -671,6 +784,7 @@ impl Graph {
     containing surface info on Graph. (Dict contents etc.) */
     std::fs::create_dir(&root_dir)?;
     std::fs::create_dir(&trees_dir)?;
+    std::fs::File::create(&dot_file)?;
     std::fs::File::create(&head_file)?;
     std::fs::write(head_file, serde_json::to_string(self)?)?;
 
@@ -989,6 +1103,13 @@ mod unit_tests {
     );
   }
   #[test]
+  fn from_rdf_async_1() {
+    use futures::executor;
+    let graph_1 = Graph::from_rdf("models\\www-2011-complete.rdf");
+    let graph_2 = executor::block_on(Graph::from_rdf_better("models\\www-2011-complete.rdf"));
+    assert_eq!(graph_1.unwrap(), graph_2.unwrap());
+  }
+  #[test]
   fn persist_to_0() {
     let mut g = Graph::new();
     g.insert_triple(["Gabe".into(), "likes".into(), "Rust".into()]);
@@ -1003,6 +1124,11 @@ mod unit_tests {
     g.insert_triple(["Chris".into(), "isnt".into(), "rude".into()]);
     g.insert_triple(["Harry".into(), "isnt".into(), "rude".into()]);
     dbg!(g.persist_to("C:\\temp\\persist_test"));
+  }
+  #[test]
+  fn persist_to_1() {
+    let mut g = Graph::from_rdf("models\\lrec-2008-complete.rdf").unwrap();
+    dbg!(g.persist_to("C:\\temp\\lrec-2008-backup"));
   }
   #[test]
   fn from_backup_0() {
