@@ -1,5 +1,4 @@
 #![allow(non_snake_case, dead_code)]
-#![feature(async_closure)]
 
 mod util;
 

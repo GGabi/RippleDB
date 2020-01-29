@@ -19,8 +19,6 @@ use crate::util::{
   rdf::query::{Sparql, QueryUnit}
 };
 
-use std::{thread, sync::{Mutex, Arc}};
-
 /* Subjects and Objects are mapped in the same
      collection to a unique int while Predicates
      are mapped seperately to unique ints.
@@ -213,7 +211,7 @@ impl Graph {
       persist_location: Some(path.to_string()),
     })
   }
-  pub fn from_rdf(path: &str) -> Result<Self, ()> {
+  pub fn from_rdf_thread_per_tree(path: &str) -> Result<Self, ()> {
     use crate::util::rdf::parser::ParsedTriples;
     use std::{thread, sync::{Mutex, Arc}};
     /* Parse the .rdf file and initialise fields all
@@ -335,28 +333,30 @@ impl Graph {
       persist_location: None,
     })
   }
-  async fn build_tree(pos: usize,
-    trees: &Arc<Mutex<Vec<Option<Box<K2Tree>>>>>,
-    triples: &Arc<Mutex<Vec<Vec<[usize; 2]>>>>,
-    dict_max: usize) {
-    let doubles = &triples.lock().unwrap()[pos];
-    let mut tree = K2Tree::new();
-    while tree.matrix_width() < dict_max {
-      tree.grow();
-    }
-    for &[x, y] in doubles {
-      if let Err(_) = tree.set(x, y, true) {
-        return
+  pub fn from_rdf_atomicly_synced(path: &str) -> Result<Self, &str> {
+    use {
+      crate::util::rdf::parser::ParsedTriples,
+      std::{
+        thread,
+        sync::{Arc, atomic::{AtomicPtr, AtomicUsize, Ordering}}
+      },
+      futures::{executor, StreamExt, stream::FuturesUnordered}
+    };
+    async unsafe fn build_tree(pos: usize,
+      triples: &ShareVec,
+      dict_max: usize) -> Option<(usize, Box<K2Tree>)> {
+      let doubles = &(*triples.0)[pos];
+      let mut tree = K2Tree::new();
+      while tree.matrix_width() < dict_max {
+        tree.grow();
       }
+      for &[x, y] in doubles {
+        if let Err(_) = tree.set(x, y, true) {
+          return None
+        }
+      }
+      Some((pos, Box::new(tree)))
     }
-    trees.lock().unwrap()[pos] = Some(Box::new(tree));
-  }
-  pub async fn from_rdf_better(path: &str) -> Result<Self, &str> {
-    use futures::executor;
-    use crate::util::rdf::parser::ParsedTriples;
-    use std::{thread, sync::{Mutex, Arc}};
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use futures::{StreamExt, stream::FuturesUnordered};
     /* Parse the .rdf file and initialise fields all
     the Graph's fields except for slices */
     let ParsedTriples {
@@ -372,66 +372,153 @@ impl Graph {
     };
     /* Build each K2Tree in parallel */
     let triples_len = partitioned_triples.len();
-    let triples = Arc::new(Mutex::new(partitioned_triples));
+    let triples = partitioned_triples;
     let counter = Arc::new(AtomicUsize::new(0));
-    let trees: Arc<Mutex<Vec<Option<Box<K2Tree>>>>> = Arc::new(
-      Mutex::new(vec![None; triples_len])
-    );
-    let build_tree = Arc::new(
-      |pos: usize,
-      trees: &Arc<Mutex<Vec<Option<Box<K2Tree>>>>>,
-      triples: &Arc<Mutex<Vec<Vec<[usize; 2]>>>>,
-      dict_max: usize| {
-        let doubles = &triples.lock().unwrap()[pos];
-        let mut tree = K2Tree::new();
-        while tree.matrix_width() < dict_max {
-          tree.grow();
-        }
-        for &[x, y] in doubles {
-          if let Err(_) = tree.set(x, y, true) {
-            return
-          }
-        }
-        trees.lock().unwrap()[pos] = Some(Box::new(tree));
-      }
-    );
     /* God this is trash rewrite the whole thing lmaooooo */
     let mut handles = Vec::new();
     dbg!(num_cpus::get());
-    for _ in 0..num_cpus::get()*2 {
-      let build_tree = Arc::clone(&build_tree);
+    struct ShareVec(*const Vec<Vec<[usize; 2]>>);
+    unsafe impl Send for ShareVec {}
+    for _ in 0..num_cpus::get() {
       let counter = Arc::clone(&counter);
-      let trees = Arc::clone(&trees);
-      let triples = Arc::clone(&triples);
+      let triples = ShareVec(&triples);
       let dict_max = dict_max;
       handles.push(thread::spawn(move || executor::block_on(async {
           let mut futs = FuturesUnordered::new();
           let mut counter_val = counter.fetch_add(1, Ordering::Relaxed);
           while counter_val < triples_len {
-            futs.push(Self::build_tree(counter_val, &trees, &triples, dict_max));
+            unsafe { futs.push(build_tree(counter_val, &triples, dict_max)); }
             counter_val = counter.fetch_add(1, Ordering::Relaxed)
           }
-          while let Some(fut_result) = futs.next().await {};
+          let mut ret_vals = Vec::new();
+          while let Some(Some(hello)) = futs.next().await {
+            ret_vals.push(hello);
+          };
+          ret_vals
       })));
     }
-    for handle in handles { handle.join().unwrap(); }
+    let mut vals: Vec<Vec<(usize, Box<K2Tree>)>> = Vec::new();
+    for handle in handles { vals.push(handle.join().unwrap()); }
     /* Check if every slice was built successfully and 
     inserts each one into the correct location in the Graph's
     slices field */
-    let mut slices: Vec<Option<Box<K2Tree>>> = Vec::new();
-    for tree in Arc::try_unwrap(trees)
-      .unwrap()
-      .into_inner()
-      .unwrap()
-      .into_iter() {
-      if let Some(tree) = tree {
-        slices.push(Some(tree));
+    let mut slices: Vec<Option<Box<K2Tree>>> = vec![None; triples_len];
+    for (pos, tree) in vals.into_iter().flat_map(|tuple| tuple) {
+        slices[pos] = Some(tree);
+    }
+    if slices.iter().filter_map(|slice|
+      if let Some(_) = slice {
+        Some(0)
       }
       else {
-        /* One of the K2Trees failed to build so
-        Graph integrity is compromised: abort */
-        return Err("one of the trees died")
+        None
       }
+    ).collect::<Vec<u8>>().len() != triples_len { return Err("tree is dead") }
+    Ok(Graph {
+      dict_max: dict_max,
+      dict_tombstones: Vec::new(),
+      dict: dict,
+      pred_tombstones: Vec::new(),
+      predicates: predicates,
+      slices: slices,
+      persist_location: None,
+    })
+  }
+  pub fn from_rdf(path: &str) -> Result<Self, &str> {
+    use crate::util::rdf::parser::ParsedTriples;
+    /* Parse the RDF file at path */
+    let ParsedTriples {
+      dict_max,
+      dict,
+      pred_max: _,
+      predicates,
+      triples: _,
+      partitioned_triples,
+    } = match ParsedTriples::from_rdf(path) {
+      Ok(p_trips) => p_trips,
+      Err(e) => return Err("error parsing triples"),
+    };
+    let num_slices = partitioned_triples.len();
+    /* Sort the Triples */
+    let sorted_trips: Vec<TripleSet> = sort_by_size(partitioned_triples);
+    let total_trips = sorted_trips.iter().fold(0, |sum, triples| sum + triples.size);
+    /* Find the TripleSet that contains the median Triple */
+    let median_tripleset: usize = {
+      let mid_triple = total_trips / 2;
+      let mut triples_before_tripleset: usize = 0;
+      let mut tripleset_index: usize = 0;
+      loop {
+        if triples_before_tripleset >= mid_triple { break tripleset_index }
+        triples_before_tripleset += sorted_trips[tripleset_index].size;
+        tripleset_index += 1;
+      }
+    };
+    /* Define two distict groups of TripleSets, lower and upper,
+    where lower contains all the triplesets smaller than the median
+    tripleset and upper contains all that are larger. */
+    let lower_range = &sorted_trips[0..median_tripleset];
+    let upper_range = &sorted_trips[median_tripleset..];
+    /* Each TripleSet corresponds to a unique K2Tree that needs to be constructed.
+    Designate half the system's cpu-cores to build the largest K2Trees in parallel (upper_range)
+    and the other half to build all the remaining smaller K2Trees (lower_range). If there
+    are less larger K2Trees to build than half the designated cores, assign all unused
+    to help build the smaller K2Trees. */
+    let half_threads = num_cpus::get() / 2; //Half of available cores on the system
+    let (num_upper_threads, num_uppers_per_thread) = {
+      if upper_range.len() < half_threads {
+        (upper_range.len(), 1)
+      }
+      else {
+        (half_threads, upper_range.len() / half_threads)
+      }
+    };
+    let (num_lower_threads, num_lowers_per_thread) = {
+      let remaining_threads = half_threads + (half_threads - num_upper_threads);
+      if lower_range.len() < remaining_threads {
+        (lower_range.len(), 1)
+      }
+      else {
+        (remaining_threads, lower_range.len() / remaining_threads)
+      }
+    };
+    /* Start building K2Trees in parallel */
+    let mut handles = Vec::new();
+    /* Spawn upper threads */
+    for thread_num in 0..num_upper_threads {
+      let end_of_lowers = num_lower_threads * num_lowers_per_thread;
+      let triplesets = sorted_trips[
+        (end_of_lowers + (thread_num * num_uppers_per_thread))
+        ..(end_of_lowers + ((thread_num + 1) * num_uppers_per_thread))
+      ].to_vec();
+      let dict_max = dict_max;
+      handles.push(std::thread::spawn(move || build_slices(triplesets, dict_max)));
+    }
+    /* Spawn lower threads */
+    for thread_num in 0..num_lower_threads {
+      let triplesets = sorted_trips[
+        (thread_num * num_lowers_per_thread)
+        ..((thread_num + 1) * num_lowers_per_thread)
+      ].to_vec();
+      let dict_max = dict_max;
+      handles.push(std::thread::spawn(move || build_slices(triplesets, dict_max)));
+    }
+    let mut slice_sets: Vec<Vec<Slice>> = Vec::new();
+    for handle in handles { slice_sets.push(handle.join().unwrap()); }
+    /* Check if every K2Tree was built successfully and 
+    insert each one into the correct location in the Graph's
+    slices field */
+    let mut slices: Vec<Option<Box<K2Tree>>> = vec![None; num_slices];
+    for Slice {
+      predicate_index: pos,
+      tree: tree
+    } in slice_sets.into_iter().flatten() {
+        slices[pos] = Some(tree);
+    }
+    if slices.iter().fold(0, |sum, slice| 
+      if let Some(tree) = slice { sum + 1 }
+      else { sum }
+    ) != num_slices {
+      return Err("tree is dead")
     }
     Ok(Graph {
       dict_max: dict_max,
@@ -1046,6 +1133,62 @@ fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
     else   { None })
   .collect()
 }
+struct Slice {
+  pub predicate_index: usize,
+  pub tree: Box<K2Tree>,
+}
+#[derive(Clone, Debug)]
+struct TripleSet {
+  pub size: usize,
+  pub predicate_index: usize,
+  pub doubles: Vec<[usize; 2]>,
+}
+type PartitionedTriples = Vec<Vec<[usize; 2]>>;
+async fn build_tree(pred_index: usize, doubles: &Vec<[usize; 2]>, dict_max: usize) -> Option<Slice> {
+  let mut tree = K2Tree::new();
+  while tree.matrix_width() < dict_max {
+    tree.grow();
+  }
+  for &[x, y] in doubles {
+    if let Err(_) = tree.set(x, y, true) {
+      return None
+    }
+  }
+  Some(Slice{
+    predicate_index: pred_index,
+    tree: Box::new(tree),
+  })
+}
+fn build_slices(triple_sets: Vec<TripleSet>, dict_max: usize) -> Vec<Slice> {
+  use futures::{executor, StreamExt, stream::FuturesUnordered};
+  executor::block_on(async {
+    let mut futs = FuturesUnordered::new();
+    for TripleSet {
+      size: _,
+      predicate_index: pi,
+      doubles: ds
+    } in &triple_sets {
+      futs.push(build_tree(*pi, ds, dict_max));
+    }
+    let mut ret_vals = Vec::new();
+    while let Some(Some(tree)) = futs.next().await {
+      ret_vals.push(tree);
+    };
+    ret_vals
+  })
+}
+fn sort_by_size(triples: PartitionedTriples) -> Vec<TripleSet> {
+  let mut sorted_triples = triples.into_iter()
+    .enumerate()
+    .map(|(i, doubles)| TripleSet{
+      size: doubles.len(),
+      predicate_index: i,
+      doubles: doubles
+    })
+    .collect::<Vec<TripleSet>>();
+  sorted_triples.sort_by(|a, b| b.size.cmp(&a.size));
+  sorted_triples
+}
 
 /* Unit Tests */
 #[cfg(test)]
@@ -1092,7 +1235,7 @@ mod unit_tests {
   }
   #[test]
   fn from_rdf_0() {
-    assert!(Graph::from_rdf(&format!("models{}pref_labels.rdf", PATH_SEP)).is_ok());
+    assert!(Graph::from_rdf(&format!("models{}www-2011-complete.rdf", PATH_SEP)).is_ok());
   }
   #[test]
   fn from_rdf_async_0() {
@@ -1101,13 +1244,6 @@ mod unit_tests {
       Graph::from_rdf_async(&format!("models{}pref_labels.rdf", PATH_SEP))
       ).is_ok()
     );
-  }
-  #[test]
-  fn from_rdf_async_1() {
-    use futures::executor;
-    let graph_1 = Graph::from_rdf("models\\www-2011-complete.rdf");
-    let graph_2 = executor::block_on(Graph::from_rdf_better("models\\www-2011-complete.rdf"));
-    assert_eq!(graph_1.unwrap(), graph_2.unwrap());
   }
   #[test]
   fn persist_to_0() {

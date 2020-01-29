@@ -2,16 +2,12 @@ use criterion::*;
 use ripple_db::Graph;
 
 pub fn from_rdf(c: &mut Criterion) {
-  use futures::executor;
   let mut group = c.benchmark_group("graph_builder");
   group.sample_size(10);
-  // group.bench_function("Graph::from_rdf() with ~500KB file",
-  //   |b| b.iter(|| Graph::from_rdf(black_box("models\\www-2011-complete.rdf")))
-  // );
-  group.bench_function("Graph::from_rdf_better() with ~500KB file",
-    |b| b.iter(|| executor::block_on(
-      Graph::from_rdf_better(black_box("models\\www-2011-complete.rdf"))
-    ))
+  group.bench_function("Graph::from_rdf() with ~1.5MB file",
+    |b| b.iter(||
+      Graph::from_rdf_atomicly_synced(black_box("models\\www-2011-complete.rdf"))
+    )
   );
   group.finish();
 }
@@ -46,6 +42,8 @@ pub fn from_backup(c: &mut Criterion) {
 criterion_group!(benches, from_rdf);
 criterion_main!(benches);
 
-//old: 381 secs
-//new without concurrency: 954 secs
-//new with conc: 853 secs
+//old on www-2011-complete.rdf: 7.40 secs (88% peak cpu)
+//new on www-2011-complete.rdf: 4.55 secs (40% peak cpu)
+
+//old on lrec-2008-complete.rdf: 31.85 secs
+//new on lrec-2008-complete.rdf: 34.94 secs
