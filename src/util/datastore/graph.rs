@@ -38,9 +38,10 @@ pub struct Graph {
   slices: Vec<Option<Box<K2Tree>>>,
   persist_location: Option<String>,
 }
-
+ 
 /* Public */
 impl Graph {
+  /* Constructors */
   pub fn new() -> Self {
     Graph {
       dict_max: 0,
@@ -177,11 +178,11 @@ impl Graph {
     || !dot_file.is_file() { /* Oof */ }
     /* Build surface level of the Graph from root/head.json */
     let Graph {
-      dict_max: dict_max,
-      dict_tombstones: dict_tombstones,
-      dict: dict,
-      pred_tombstones: pred_tombstones,
-      predicates: predicates,
+      dict_max,
+      dict_tombstones,
+      dict,
+      pred_tombstones,
+      predicates,
       slices: _,
       persist_location: _
     } = serde_json::from_str::<Graph>(&read_json(&head_file)?)?;
@@ -485,20 +486,29 @@ impl Graph {
     let mut handles = Vec::new();
     /* Spawn upper threads */
     for thread_num in 0..num_upper_threads {
-      let end_of_lowers = num_lower_threads * num_lowers_per_thread;
-      let triplesets = sorted_trips[
-        (end_of_lowers + (thread_num * num_uppers_per_thread))
-        ..(end_of_lowers + ((thread_num + 1) * num_uppers_per_thread))
-      ].to_vec();
+      let triplesets = if thread_num != num_upper_threads-1 {
+        sorted_trips[
+            (median_tripleset + (thread_num * num_uppers_per_thread))
+            ..(median_tripleset + ((thread_num + 1) * num_uppers_per_thread))
+          ].to_vec()
+        }
+        else {
+          sorted_trips[(median_tripleset + (thread_num * num_uppers_per_thread))..].to_vec()
+      };
       let dict_max = dict_max;
       handles.push(std::thread::spawn(move || build_slices(triplesets, dict_max)));
     }
     /* Spawn lower threads */
     for thread_num in 0..num_lower_threads {
-      let triplesets = sorted_trips[
-        (thread_num * num_lowers_per_thread)
-        ..((thread_num + 1) * num_lowers_per_thread)
-      ].to_vec();
+      let triplesets = if thread_num != num_lower_threads-1 {
+          sorted_trips[
+            (thread_num * num_lowers_per_thread)
+            ..((thread_num + 1) * num_lowers_per_thread)
+          ].to_vec()
+        }
+        else {
+          sorted_trips[(thread_num * num_lowers_per_thread)..median_tripleset].to_vec()
+      };
       let dict_max = dict_max;
       handles.push(std::thread::spawn(move || build_slices(triplesets, dict_max)));
     }
@@ -509,16 +519,13 @@ impl Graph {
     slices field */
     let mut slices: Vec<Option<Box<K2Tree>>> = vec![None; num_slices];
     for Slice {
-      predicate_index: pos,
-      tree: tree
+      predicate_index,
+      tree
     } in slice_sets.into_iter().flatten() {
-        slices[pos] = Some(tree);
+        slices[predicate_index] = Some(tree);
     }
-    if slices.iter().fold(0, |sum, slice| 
-      if let Some(tree) = slice { sum + 1 }
-      else { sum }
-    ) != num_slices {
-      return Err("tree is dead")
+    if slices.contains(&None) {
+      return Err("a tree is dead")
     }
     Ok(Graph {
       dict_max: dict_max,
@@ -719,13 +726,12 @@ impl Graph {
         [Some(&c), Some(&r), Some(&s)] => (c, r, s),
         _ => return Ok(())
     };
-    let slice =
-      if let Some(slice) = &mut self.slices[slice_pos] {
+    let slice = if let Some(slice) = &mut self.slices[slice_pos] {
         slice
       }
       else {
         return Err(())
-      };
+    };
     slice.set(subject_pos, object_pos, false)?;
     /* Check if we've removed all instances of a word.
     If we have: Remove from dictionaries and do other stuff */
@@ -834,6 +840,17 @@ impl Graph {
     Ok(())
   }
   pub fn persist_to(&mut self, path: &str) -> Result<(), std::io::Error> {
+    /* Define locations to persist to */
+    let root_dir = std::path::Path::new(path);
+    /* Save the location this Graph is persisted to */
+    self.persist_location = Some(root_dir.to_str().unwrap().to_string());
+    /* Do the saving */
+    self.persist()
+  }
+  pub fn persist_location(&self) -> &Option<String> {
+    &self.persist_location
+  }
+  pub fn persist(&self) -> Result<(), std::io::Error> {
     /* Only want to use this trait in this func, not public as it's not really
     "serializing" the Graph and would be confusing to users if the trait was
     publicly implemented */
@@ -849,29 +866,31 @@ impl Graph {
         state.end()
       }
     }
+    // if let None = self.persist_location { return Err("yo") }
+    let path = &self.persist_location.clone().unwrap();
     /* Define locations to persist to */
     let root_dir = std::path::Path::new(path);
     let trees_dir = root_dir.join("trees");
     let head_file = root_dir.join("head.json");
     let dot_file = root_dir.join(".ripplebackup");
 
-    if root_dir.is_dir() {
-      /* If the folder already exists then either:
-       - It's being used by another process
-       - This Graph has already been saved here
-      In both cases we don't wanna disturb this location. */
-      // return Err("Dir already exists")
-      return Ok(())
+    if root_dir.is_dir() && dot_file.is_file() {
+      /* Graph's been saved here before, wipe the head_file
+      and files in root/trees/ */
+      std::fs::remove_file(&head_file)?;
+      for entry in std::fs::read_dir(&trees_dir)? {
+        let entry_path = entry?.path();
+        if entry_path.is_file() {
+          std::fs::remove_file(entry_path)?;
+        }
+      }
     }
-    
-    /* Save the location this Graph is persisted to */
-    self.persist_location = Some(root_dir.to_str().unwrap().to_string());
-
-    /* If we good then create root/, root/trees/ and root/head.json which
-    containing surface info on Graph. (Dict contents etc.) */
-    std::fs::create_dir(&root_dir)?;
-    std::fs::create_dir(&trees_dir)?;
-    std::fs::File::create(&dot_file)?;
+    else {
+      std::fs::create_dir(&root_dir)?;
+      std::fs::create_dir(&trees_dir)?;
+      std::fs::File::create(&dot_file)?;
+    }
+    /* Create an serialise Graph to root/head.json */
     std::fs::File::create(&head_file)?;
     std::fs::write(head_file, serde_json::to_string(self)?)?;
 
@@ -887,9 +906,6 @@ impl Graph {
     }
 
     Ok(())
-  }
-  pub fn persist_location(&self) -> Option<String> {
-    self.persist_location.clone()
   }
 }
 
@@ -1186,7 +1202,7 @@ fn sort_by_size(triples: PartitionedTriples) -> Vec<TripleSet> {
       doubles: doubles
     })
     .collect::<Vec<TripleSet>>();
-  sorted_triples.sort_by(|a, b| b.size.cmp(&a.size));
+  sorted_triples.sort_by(|a, b| a.size.cmp(&b.size));
   sorted_triples
 }
 
@@ -1259,12 +1275,27 @@ mod unit_tests {
     g.insert_triple(["Ron".into(), "isnt".into(), "rude".into()]);
     g.insert_triple(["Chris".into(), "isnt".into(), "rude".into()]);
     g.insert_triple(["Harry".into(), "isnt".into(), "rude".into()]);
-    dbg!(g.persist_to("C:\\temp\\persist_test"));
+    assert!(g.persist_to(&format!("C:{}temp{}persist-test", PATH_SEP, PATH_SEP)).is_ok());
   }
   #[test]
   fn persist_to_1() {
-    let mut g = Graph::from_rdf("models\\lrec-2008-complete.rdf").unwrap();
-    dbg!(g.persist_to("C:\\temp\\lrec-2008-backup"));
+    let mut g = Graph::from_rdf(&format!("models{}www-2011-complete.rdf", PATH_SEP)).unwrap();
+    assert!(g.persist_to(&format!("C:{}temp{}lrec-2008-backup", PATH_SEP, PATH_SEP)).is_ok());
+  }
+  #[test]
+  fn persist_0() {
+    let mut g = Graph::new();
+    g.insert_triple(["Gabe".into(), "likes".into(), "Rust".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Js".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Harry".into()]);
+    g.insert_triple(["Scala".into(), "is".into(), "male".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Ron".into()]);
+    g.insert_triple(["Gabe".into(), "likes".into(), "Chris".into()]);
+    g.insert_triple(["Ron".into(), "is".into(), "male".into()]);
+    g.persist_to(&format!("C:{}temp{}persist-test", PATH_SEP, PATH_SEP));
+    g.insert_triple(["Chris".into(), "isnt".into(), "rude".into()]);
+    g.insert_triple(["Harry".into(), "isnt".into(), "rude".into()]);
+    assert!(g.persist().is_ok());
   }
   #[test]
   fn from_backup_0() {
