@@ -13,11 +13,30 @@ use serde::{
   de::{self, Visitor, MapAccess}
 };
 
-use crate::util::{
+use crate::ripple_db::{
   Triple,
   datastore::k2_tree::K2Tree,
   rdf::query::{Sparql, QueryUnit}
 };
+
+/*
+  TODO:
+   - Add support for graph to store BlankNode and LangEncodedNodes rather than jus raw string
+   - Add support for TriplesParser to not ignore every triple not containing basic strings
+   - Add an iterator for Graph which produces Triples of rich types described above
+   - Add a method to export the graph contents, produced from Graph::Iter, to RDF
+*/
+
+// enum RdfNode {
+//   Named(String),
+//   Blank{ id: usize },
+//   Literal(Literal),
+// }
+// enum Literal {
+//   Raw{ val: String },
+//   LangTagged{ val: String, lang: String },
+//   Typed{ val: String, datatype: String },
+// }
 
 /* Subjects and Objects are mapped in the same
      collection to a unique int while Predicates
@@ -213,7 +232,7 @@ impl Graph {
     })
   }
   pub fn from_rdf_thread_per_tree(path: &str) -> Result<Self, ()> {
-    use crate::util::rdf::parser::ParsedTriples;
+    use crate::ripple_db::rdf::parser::ParsedTriples;
     use std::{thread, sync::{Mutex, Arc}};
     /* Parse the .rdf file and initialise fields all
     the Graph's fields except for slices */
@@ -241,7 +260,7 @@ impl Graph {
           tree.grow();
         }
         for [x, y] in doubles {
-          if let Err(_) = tree.set(x, y, true) {
+          if tree.set(x, y, true).is_err() {
             return
           }
         }
@@ -278,7 +297,7 @@ impl Graph {
     })
   }
   pub async fn from_rdf_async(path: &str) -> Result<Self, ()> {
-    use crate::util::rdf::parser::ParsedTriples;
+    use crate::ripple_db::rdf::parser::ParsedTriples;
     use futures::{StreamExt, stream::FuturesOrdered};
     /* Parse the .rdf file and initialise fields all
     the Graph's fields except for slices */
@@ -295,15 +314,14 @@ impl Graph {
     };
     /* Build each K2Tree concurrently on one thread */
     let mut tree_futs = FuturesOrdered::new();
-    for i in 0..partitioned_triples.len() {
-      let doubles = partitioned_triples[i].clone();
+    for doubles in &partitioned_triples {
       tree_futs.push(async move {
         let mut tree = K2Tree::new();
         while tree.matrix_width() < dict_max {
           tree.grow();
         }
         for [x, y] in doubles {
-          if let Err(_) = tree.set(x, y, true) {
+          if tree.set(*x, *y, true).is_err() {
             return Err(())
           }
         }
@@ -336,10 +354,10 @@ impl Graph {
   }
   pub fn from_rdf_atomicly_synced(path: &str) -> Result<Self, &str> {
     use {
-      crate::util::rdf::parser::ParsedTriples,
+      crate::ripple_db::rdf::parser::ParsedTriples,
       std::{
         thread,
-        sync::{Arc, atomic::{AtomicPtr, AtomicUsize, Ordering}}
+        sync::{Arc, atomic::{AtomicUsize, Ordering}}
       },
       futures::{executor, StreamExt, stream::FuturesUnordered}
     };
@@ -352,7 +370,7 @@ impl Graph {
         tree.grow();
       }
       for &[x, y] in doubles {
-        if let Err(_) = tree.set(x, y, true) {
+        if tree.set(x, y, true).is_err() {
           return None
         }
       }
@@ -404,17 +422,17 @@ impl Graph {
     inserts each one into the correct location in the Graph's
     slices field */
     let mut slices: Vec<Option<Box<K2Tree>>> = vec![None; triples_len];
-    for (pos, tree) in vals.into_iter().flat_map(|tuple| tuple) {
+    for (pos, tree) in vals.into_iter().flatten() {
         slices[pos] = Some(tree);
     }
     if slices.iter().filter_map(|slice|
-      if let Some(_) = slice {
+      if slice.is_some() {
         Some(0)
       }
       else {
         None
       }
-    ).collect::<Vec<u8>>().len() != triples_len { return Err("tree is dead") }
+    ).count() != triples_len { return Err("tree is dead") }
     Ok(Graph {
       dict_max: dict_max,
       dict_tombstones: Vec::new(),
@@ -426,7 +444,7 @@ impl Graph {
     })
   }
   pub fn from_rdf(path: &str) -> Result<Self, &str> {
-    use crate::util::rdf::parser::ParsedTriples;
+    use crate::ripple_db::rdf::parser::ParsedTriples;
     /* Parse the RDF file at path */
     let ParsedTriples {
       dict_max,
@@ -595,7 +613,7 @@ impl Graph {
             2 => [None, None, Some(final_result.clone())],
             _ => [None, None, None],
           };
-          if self.filter_triples_str(qt_results.clone(), filter_t).len() == 0 {
+          if self.filter_triples_str(qt_results.clone(), filter_t).is_empty() {
             /* There was no match for this value of the variable from final_results in
             the query triple, so mark it to be removed at the end of this cycle */
             vars_vals_to_remove.push(i);
@@ -603,7 +621,7 @@ impl Graph {
         }
       }
       final_results = final_results.into_iter().enumerate().filter_map(|(i, res)| {
-        if vars_vals_to_remove.len() > 0 {
+        if !vars_vals_to_remove.is_empty() {
           if i == vars_vals_to_remove[0] {
             vars_vals_to_remove.remove(0);
             None
@@ -624,7 +642,7 @@ impl Graph {
     let col = match self.dict.get_by_left(&val[0]) {
       Some(&col) => col,
       None => {
-        if self.dict_tombstones.len() > 0 {
+        if !self.dict_tombstones.is_empty() {
           let col = self.dict_tombstones[0];
           self.dict.insert(val[0].clone(), col);
           col
@@ -632,7 +650,7 @@ impl Graph {
         else {
           if self.dict_max != 0 { self.dict_max += 1; }
           self.dict.insert(val[0].clone(), self.dict_max);
-          if self.slices.len() > 0 {
+          if !self.slices.is_empty() {
             for slice in &mut self.slices {
               match slice {
                 Some(slice) if self.dict_max >= slice.matrix_width() => {
@@ -649,7 +667,7 @@ impl Graph {
     let row = match self.dict.get_by_left(&val[2]) {
       Some(&row) => row,
       None => {
-        if self.dict_tombstones.len() > 0 {
+        if !self.dict_tombstones.is_empty() {
           let row = self.dict_tombstones[0];
           self.dict.insert(val[2].clone(), row);
           row
@@ -657,7 +675,7 @@ impl Graph {
         else {
           self.dict_max += 1;
           self.dict.insert(val[2].clone(), self.dict_max);
-          if self.slices.len() > 0 {
+          if !self.slices.is_empty() {
             for slice in &mut self.slices {
               match slice {
                 Some(slice) if self.dict_max >= slice.matrix_width() => {
@@ -675,7 +693,7 @@ impl Graph {
       Some(&slice_index) => &mut self.slices[slice_index],
       None => {
         let desired_size =
-          if self.slices.len() > 0 {
+          if !self.slices.is_empty() {
             let mut desired_size = 0;
             for slice in &self.slices {
               match slice {
@@ -692,7 +710,7 @@ impl Graph {
             8 //Min size assuming k=2
           };
         let new_slice =
-          if self.pred_tombstones.len() > 0 {
+          if !self.pred_tombstones.is_empty() {
             let new_slice_pos = self.pred_tombstones[0];
             self.predicates.insert(val[1].clone(), new_slice_pos);
             &mut self.slices[new_slice_pos]
@@ -1160,13 +1178,13 @@ struct TripleSet {
   pub doubles: Vec<[usize; 2]>,
 }
 type PartitionedTriples = Vec<Vec<[usize; 2]>>;
-async fn build_tree(pred_index: usize, doubles: &Vec<[usize; 2]>, dict_max: usize) -> Option<Slice> {
+async fn build_tree(pred_index: usize, doubles: &[[usize; 2]], dict_max: usize) -> Option<Slice> {
   let mut tree = K2Tree::new();
   while tree.matrix_width() < dict_max {
     tree.grow();
   }
   for &[x, y] in doubles {
-    if let Err(_) = tree.set(x, y, true) {
+    if tree.set(x, y, true).is_err() {
       return None
     }
   }

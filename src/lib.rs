@@ -1,8 +1,8 @@
-#![allow(non_snake_case, dead_code)]
+#![allow(non_snake_case, dead_code, unused_must_use)]
 
-mod util;
+mod ripple_db;
 
-pub use util::datastore::graph::Graph as Graph;
-pub use util::rdf::query::Sparql as SparqlQuery;
-pub use util::datastore::k2_tree as k2_tree;
-pub use util::Triple as Triple;
+pub use ripple_db::datastore::graph::Graph as Graph;
+pub use ripple_db::rdf::query::Sparql as SparqlQuery;
+pub use ripple_db::datastore::k2_tree as k2_tree;
+pub use ripple_db::Triple as Triple;

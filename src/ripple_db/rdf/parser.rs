@@ -110,7 +110,7 @@ impl ParsedTriples {
 
     let mut triples: Vec<Triple> = Vec::new();
 
-    RdfXmlParser::new(BufReader::new(File::open(path.clone()).unwrap()), &format!("file:{}", path))
+    RdfXmlParser::new(BufReader::new(File::open(path).unwrap()), &format!("file:{}", path))
       .unwrap()
       .parse_all(&mut |t| {
         match t {

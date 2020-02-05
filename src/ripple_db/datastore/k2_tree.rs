@@ -14,7 +14,7 @@ use serde::{
 
 pub type BitMatrix = Vec<BitVec>;
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone)]
 pub struct K2Tree {
   matrix_width: usize,
   k: usize, //k^2 == number of submatrices in each stem/leaf
@@ -55,12 +55,7 @@ impl K2Tree {
   }
   /* Operation */
   pub fn is_empty(&self) -> bool {
-    if ones_in_range(&self.leaves, 0, self.leaves.len()) == 0 {
-      true
-    }
-    else {
-      false
-    }
+    ones_in_range(&self.leaves, 0, self.leaves.len()) == 0
   }
   pub fn get(&self, x: usize, y: usize) -> Result<bool, ()> {
     if x >= self.matrix_width || y >= self.matrix_width { return Err(()) }
@@ -68,7 +63,7 @@ impl K2Tree {
     match self.matrix_bit(x, y, self.matrix_width)? {
       DescendResult::Leaf(leaf_start, leaf_range) => {
         if leaf_range[0][1] - leaf_range[0][0] != 1
-        || leaf_range[0][1] - leaf_range[0][0] != 1 {
+        || leaf_range[1][1] - leaf_range[1][0] != 1 {
           /* ERROR: Final submatrix isn't 2x2 so can't be a leaf */
         }
         if x == leaf_range[0][0] {
@@ -102,7 +97,7 @@ impl K2Tree {
     match self.matrix_bit(x, y, self.matrix_width)? {
       DescendResult::Leaf(leaf_start, leaf_range) => {
         if leaf_range[0][1] - leaf_range[0][0] != 1
-        || leaf_range[0][1] - leaf_range[0][0] != 1 {
+        || leaf_range[1][1] - leaf_range[1][0] != 1 {
           /* ERROR: Final submatrix isn't a 2 by 2 so can't be a leaf */
           return Err(())
         }
@@ -130,7 +125,7 @@ impl K2Tree {
           remove_block(&mut self.leaves, leaf_start, 4)?;
           let stem_bit_pos = self.stem_to_leaf[leaf_start/4];
           self.stem_to_leaf.remove(leaf_start/4);
-          if self.stem_to_leaf.len() == 0 {
+          if self.stem_to_leaf.is_empty() {
             /* If no more leaves, then remove all stems immediately
             and don't bother with complex stuff below */
             self.stems = bitvec![0,0,0,0];
@@ -328,7 +323,7 @@ impl K2Tree {
       tree */
       return Err(())
     }
-    else if &self.stems[0..4] != bitvec![1,0,0,0] {
+    else if self.stems[0..4] != bitvec![1,0,0,0] {
       /* Shrinking would lose information, can't have that */
       return Err(())
     }
@@ -357,8 +352,8 @@ impl K2Tree {
   pub fn to_matrix(&self) -> BitMatrix { unimplemented!() }
   pub fn from_matrix(m: BitMatrix) -> Result<Self, ()> {
     let mut tree = K2Tree::new();
-    for x in 0..m.len() {
-      for y in one_positions(&m[x]).into_iter() {
+    for (x, column) in m.iter().enumerate() {
+      for y in one_positions(column).into_iter() {
         tree.set(x, y, true)?;
       }
     }
@@ -454,7 +449,7 @@ impl<'a> Iterator for LeavesRaw<'a> {
   }
 }
 
-/* Std Traits */
+/* Traits */
 impl core::fmt::Display for K2Tree {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     if self.leaves.len() == 0 { return write!(f, "[0000]") }
@@ -505,13 +500,21 @@ impl PartialEq for K2Tree {
     self.k == other.k
     && self.matrix_width == other.matrix_width
     && self.stems == other.stems
-    && self.leaves == self.leaves
+    && self.leaves == other.leaves
   }
 }
 impl Eq for K2Tree {}
 impl Default for K2Tree {
   fn default() -> Self {
     Self::new()
+  }
+}
+impl std::hash::Hash for K2Tree {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+      self.k.hash(state);
+      self.matrix_width.hash(state);
+      self.stems.hash(state);
+      self.leaves.hash(state);
   }
 }
 impl std::convert::TryFrom<BitMatrix> for K2Tree {
@@ -541,12 +544,12 @@ impl std::convert::TryFrom<Vec<Vec<bool>>> for K2Tree {
 impl Serialize for K2Tree {
   fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
     let mut state = serializer.serialize_struct("K2Tree", 7)?;
-    state.serialize_field("matrix_width", &self.matrix_width)?;
+    state.serialize_field("matrixWidth", &self.matrix_width)?;
     state.serialize_field("k", &self.k)?;
-    state.serialize_field("max_stem_layers", &self.max_slayers)?;
-    state.serialize_field("stem_layer_starts", &self.slayer_starts)?;
+    state.serialize_field("maxStemLayers", &self.max_slayers)?;
+    state.serialize_field("stemLayerStarts", &self.slayer_starts)?;
     state.serialize_field("stems", &self.stems.clone().into_vec() as &Vec<u8>)?;
-    state.serialize_field("stem_to_leaf", &self.stem_to_leaf)?;
+    state.serialize_field("stemToLeaf", &self.stem_to_leaf)?;
     state.serialize_field("leaves", &self.leaves.clone().into_vec() as &Vec<u8>)?;
     state.end()
   }
@@ -554,14 +557,14 @@ impl Serialize for K2Tree {
 impl<'de> Deserialize<'de> for K2Tree {
   fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
     #[derive(Deserialize)]
-    #[serde(field_identifier, rename_all = "lowercase")]
+    #[serde(field_identifier, rename_all = "camelCase")]
     enum Field {
-      Matrix_Width,
+      MatrixWidth,
       K,
-      Max_Stem_Layers,
-      Stem_Layer_Starts,
+      MaxStemLayers,
+      StemLayerStarts,
       Stems,
-      Stem_To_Leaf,
+      StemToLeaf,
       Leaves
     }
     struct K2TreeVisitor;
@@ -580,7 +583,7 @@ impl<'de> Deserialize<'de> for K2Tree {
         let mut leaves = None;
         while let Some(key) = map.next_key()? {
           match key {
-            Field::Matrix_Width => {
+            Field::MatrixWidth => {
                 if m_width.is_some() {
                     return Err(de::Error::duplicate_field("matrix_width"));
                 }
@@ -592,13 +595,13 @@ impl<'de> Deserialize<'de> for K2Tree {
               }
               k = Some(map.next_value()?);
             }
-            Field::Max_Stem_Layers => {
+            Field::MaxStemLayers => {
               if max_slayers.is_some() {
                   return Err(de::Error::duplicate_field("max_stem_layer"));
               }
               max_slayers = Some(map.next_value()?);
             }
-            Field::Stem_Layer_Starts => {
+            Field::StemLayerStarts => {
               if slayer_starts.is_some() {
                   return Err(de::Error::duplicate_field("stem_layer_starts"));
               }
@@ -610,7 +613,7 @@ impl<'de> Deserialize<'de> for K2Tree {
               }
               stems = Some(BitVec::from(map.next_value::<Vec<u8>>()?));
             }
-            Field::Stem_To_Leaf => {
+            Field::StemToLeaf => {
               if stem_to_leaf.is_some() {
                 return Err(de::Error::duplicate_field("stem_to_leaf"));
               }
@@ -624,12 +627,12 @@ impl<'de> Deserialize<'de> for K2Tree {
             }
           }
         }
-        let m_width = m_width.ok_or_else(|| de::Error::missing_field("matrix_width"))?;
+        let m_width = m_width.ok_or_else(|| de::Error::missing_field("matrixWidth"))?;
         let k = k.ok_or_else(|| de::Error::missing_field("k"))?;
-        let max_slayers = max_slayers.ok_or_else(|| de::Error::missing_field("max_stem_layers"))?;
-        let slayer_starts = slayer_starts.ok_or_else(|| de::Error::missing_field("stem_layer_starts"))?;
+        let max_slayers = max_slayers.ok_or_else(|| de::Error::missing_field("maxStemLayers"))?;
+        let slayer_starts = slayer_starts.ok_or_else(|| de::Error::missing_field("stemLayerStarts"))?;
         let stems = stems.ok_or_else(|| de::Error::missing_field("stems"))?;
-        let stem_to_leaf = stem_to_leaf.ok_or_else(|| de::Error::missing_field("stem_to_leaf"))?;
+        let stem_to_leaf = stem_to_leaf.ok_or_else(|| de::Error::missing_field("stemToLeaf"))?;
         let leaves = leaves.ok_or_else(|| de::Error::missing_field("leaves"))?;
         Ok(K2Tree {
           matrix_width: m_width,
@@ -798,7 +801,8 @@ fn remove_block(bit_vec: &mut BitVec, block_start: usize, block_len: usize) -> R
     Err(())
   }
   else {
-    Ok(for _ in 0..block_len { bit_vec.remove(block_start); })
+    for _ in 0..block_len { bit_vec.remove(block_start); }
+    Ok(())
   }
 }
 fn insert_block(bit_vec: &mut BitVec, block_start: usize, block_len: usize) -> Result<(), ()> {
@@ -807,7 +811,8 @@ fn insert_block(bit_vec: &mut BitVec, block_start: usize, block_len: usize) -> R
     Err(())
   }
   else {
-    Ok(for _ in 0..block_len { bit_vec.insert(block_start, false); })
+    for _ in 0..block_len { bit_vec.insert(block_start, false); }
+    Ok(())
   }
 }
 fn to_4_subranges(r: Range) -> [Range; 4] {
@@ -839,6 +844,7 @@ fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
 #[cfg(test)]
 mod unit_tests {
   use super::*;
+    
   use rand::Rng;
   #[test]
   fn to_from_json_0() {

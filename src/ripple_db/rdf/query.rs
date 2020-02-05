@@ -18,13 +18,14 @@ impl From<String> for QueryUnit {
   fn from(s: String) -> Self {
     match s.chars().next() {
       Some('$') => QueryUnit::Var(s[1..].into()),
-      Some(_)   => QueryUnit::Val(s.into()),
+      Some(_)   => QueryUnit::Val(s),
       None      => QueryUnit::None,
     }
   }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct Sparql {
   pub vars: Vec<QueryUnit>,
   pub conds: Vec<[QueryUnit; 3]>,
@@ -39,7 +40,7 @@ impl Sparql {
   pub fn select(mut self, vars: Vec<String>) -> Self {
     self.vars = vars.to_vec()
       .into_iter()
-      .map(|x| QueryUnit::from(x))
+      .map(QueryUnit::from)
       .collect();
     self
   }
