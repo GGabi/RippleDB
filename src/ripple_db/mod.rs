@@ -6,12 +6,91 @@ pub mod rdf;
 /* Common Definitions */
 
 pub type Triple = [String; 3];
+pub type RdfTriple = [RdfNode; 3];
+pub type GraphTriple = [GraphNode; 3];
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum GraphNode {
+  Named{ iri: String },
+  Blank,
+  RawLit{ val: String },
+  LangTaggedLit{ val: String, lang: String },
+  TypedLit{ val: String, datatype: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum RdfNode {
+  Subject(RdfSubject),
+  Predicate{iri: String},
+  Object(RdfObject),
+}
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum RdfSubject {
+  Named{iri: String},
+  Blank,
+}
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum RdfObject {
+  Named{iri: String},
+  Blank,
+  Literal(RdfLiteral),
+}
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum RdfLiteral {
+  Raw{val: String},
+  LangTagged{val: String, lang: String},
+  Typed{val: String, datatype: String},
+}
+
+// impl PartialEq for RdfNode {
+//   fn eq(&self, other: &Self) -> bool {
+//     match self {
+//       RdfNode::Subject(s) => {
+//         match s {
+//           RdfSubject::Named{iri:s} => {
+//             match other {
+//               RdfNode::Subject(RdfSubject::Named{iri:other_s}) => {
+//                 s == other_s
+//               },
+//               RdfNode::Object(RdfObject::Named{iri:o}) => {
+//                 s == o
+//               },
+//               _ => false,
+//             }
+//           },
+//           RdfSubject::Blank => {
+//             match other {
+//               RdfNode::Subject(RdfSubject::Blank) => true,
+//               RdfNode::Object(RdfObject::Blank) => true,
+//               _ => false,
+//             }
+//           },
+//         }
+//       },
+//       RdfNode::Predicate{iri:p} => {
+//         if let RdfNode::Predicate{iri:other_p} = other {
+//           p == other_p
+//         }
+//         else {
+//           false
+//         }
+//       },
+//       RdfNode::Object(o) => {
+//         match o {
+//           RdfObject::Named{iri:o} => {},
+//           RdfObject::Blank => {},
+//           RdfObject::Literal(o) => {},
+//         }
+//       },
+//     }
+//   }
+// }
 
 #[derive(Clone)]
 struct Nibble(u8);
 impl Nibble {
   fn new(val: u8) -> Result<Self, ()> {
-    if val > 8 {
+    if val > 15 {
       return Err(())
     }
     Ok(Nibble(val))
