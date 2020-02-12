@@ -16,15 +16,18 @@ use serde::{
 use crate::ripple_db::{
   RdfNode, RdfTriple,
   datastore::k2_tree::{self, K2Tree},
-  rdf::query::{Sparql, QueryUnit}
+  rdf::{
+    query::{Sparql, QueryUnit},
+    builder::RdfBuilder,
+  }
 };
 
 /*
   TODO:
    x Add support for graph to store BlankNode and LangEncodedNodes rather than jus raw string
    x Add support for TriplesParser to not ignore every triple not containing basic strings
-   - Add an iterator for Graph which produces Triples of rich types described above
-   - x Implement Leaves iterator on K2Tree
+   x Add an iterator for Graph which produces Triples of rich types described above
+   x x Implement Leaves iterator on K2Tree
    - Add a method to export the graph contents, produced from Graph::Iter, to RDF
 */
 
@@ -714,6 +717,15 @@ impl Graph {
       slice: 0,
       slice_iter: iter,
     }
+  }
+  pub fn to_rdf(&self, path: &str) -> Result<(), std::io::Error> {
+    let buf = RdfBuilder::iter_to_rdf(self.iter());
+    let file = std::path::Path::new(path);
+    if !file.is_file() {
+      std::fs::File::create(&file)?;
+      std::fs::write(file, buf)?;
+    }
+    Ok(())
   }
 }
 
