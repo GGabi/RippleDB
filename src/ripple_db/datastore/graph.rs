@@ -14,16 +14,17 @@ use serde::{
 };
 
 use crate::ripple_db::{
-  Triple, GraphNode, GraphTriple,
-  datastore::k2_tree::K2Tree,
+  RdfNode, RdfTriple,
+  datastore::k2_tree::{self, K2Tree},
   rdf::query::{Sparql, QueryUnit}
 };
 
 /*
   TODO:
-   - Add support for graph to store BlankNode and LangEncodedNodes rather than jus raw string
-   - Add support for TriplesParser to not ignore every triple not containing basic strings
+   x Add support for graph to store BlankNode and LangEncodedNodes rather than jus raw string
+   x Add support for TriplesParser to not ignore every triple not containing basic strings
    - Add an iterator for Graph which produces Triples of rich types described above
+   - x Implement Leaves iterator on K2Tree
    - Add a method to export the graph contents, produced from Graph::Iter, to RDF
 */
 
@@ -40,9 +41,9 @@ pub struct Graph {
   //Use BiMap instead of HashMap because we want to be able to find the strings rows/columns represent
   dict_max: usize,
   dict_tombstones: Vec<usize>,
-  dict: BiBTreeMap<GraphNode, usize>,
+  dict: BiBTreeMap<RdfNode, usize>,
   pred_tombstones: Vec<usize>,
-  predicates: BiBTreeMap<GraphNode, usize>,
+  predicates: BiBTreeMap<RdfNode, usize>,
   slices: Vec<Option<Box<K2Tree>>>,
   persist_location: Option<String>,
 }
@@ -61,166 +62,166 @@ impl Graph {
       persist_location: None,
     }
   }
-  // pub fn from_backup(path: &str) -> Result<Self, std::io::Error> {
-  //   unimplemented!();
-  //   /* Private trait impl */
-  //   impl<'de> Deserialize<'de> for Graph {
-  //     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-  //       #[derive(Deserialize)]
-  //       #[serde(field_identifier, rename_all = "camelCase")]
-  //       enum Field {
-  //         DictMax,
-  //         DictTombstones,
-  //         Dict,
-  //         PredTombstones,
-  //         Predicates,
-  //         PersistLocation
-  //       }
-  //       struct GraphVisitor;
-  //       impl<'de> Visitor<'de> for GraphVisitor {
-  //         type Value = Graph;
-  //         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-  //           formatter.write_str("struct Graph")
-  //         }
-  //         fn visit_map<V: MapAccess<'de>>(self, mut map: V) -> Result<Graph, V::Error> {
-  //           let mut dict_max = None;
-  //           let mut dict_tombstones = None;
-  //           let mut dict = None;
-  //           let mut pred_tombstones = None;
-  //           let mut predicates = None;
-  //           let mut persist_location = None;
-  //           while let Some(key) = map.next_key()? {
-  //             match key {
-  //               Field::DictMax => {
-  //                 if dict_max.is_some() {
-  //                     return Err(de::Error::duplicate_field("dictMax"));
-  //                 }
-  //                 dict_max = Some(map.next_value()?);
-  //               }
-  //               Field::DictTombstones => {
-  //                 if dict_tombstones.is_some() {
-  //                   return Err(de::Error::duplicate_field("dictTombstones"));
-  //                 }
-  //                 dict_tombstones = Some(map.next_value()?);
-  //               }
-  //               Field::Dict => {
-  //                 if dict.is_some() {
-  //                   return Err(de::Error::duplicate_field("dict"));
-  //                 }
-  //                 dict = Some(map.next_value::<Vec<(String, usize)>>()?);
-  //               }
-  //               Field::PredTombstones => {
-  //                 if pred_tombstones.is_some() {
-  //                     return Err(de::Error::duplicate_field("predTombstones"));
-  //                 }
-  //                 pred_tombstones = Some(map.next_value()?);
-  //               }
-  //               Field::Predicates => {
-  //                 if predicates.is_some() {
-  //                   return Err(de::Error::duplicate_field("predicates"));
-  //                 }
-  //                 predicates = Some(map.next_value::<Vec<(String, usize)>>()?);
-  //               }
-  //               Field::PersistLocation => {
-  //                 if persist_location.is_some() {
-  //                   return Err(de::Error::duplicate_field("persistLocation"));
-  //                 }
-  //                 persist_location = Some(map.next_value()?);
-  //               }
-  //             }
-  //           }
-  //           let dict_max = dict_max.ok_or_else(|| de::Error::missing_field("dictMax"))?;
-  //           let dict_tombstones = dict_tombstones.ok_or_else(|| de::Error::missing_field("dictTombstones"))?;
-  //           let dict = dict.ok_or_else(|| de::Error::missing_field("dict"))?;
-  //           let pred_tombstones = pred_tombstones.ok_or_else(|| de::Error::missing_field("predTombstones"))?;
-  //           let predicates = predicates.ok_or_else(|| de::Error::missing_field("predicates"))?;
-  //           let persist_location = persist_location.ok_or_else(|| de::Error::missing_field("persistLocation"))?;
+  pub fn from_backup(path: &str) -> Result<Self, std::io::Error> {
+    // unimplemented!();
+    /* Private trait impl */
+    impl<'de> Deserialize<'de> for Graph {
+      fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(field_identifier, rename_all = "camelCase")]
+        enum Field {
+          DictMax,
+          DictTombstones,
+          Dict,
+          PredTombstones,
+          Predicates,
+          PersistLocation
+        }
+        struct GraphVisitor;
+        impl<'de> Visitor<'de> for GraphVisitor {
+          type Value = Graph;
+          fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("struct Graph")
+          }
+          fn visit_map<V: MapAccess<'de>>(self, mut map: V) -> Result<Graph, V::Error> {
+            let mut dict_max = None;
+            let mut dict_tombstones = None;
+            let mut dict = None;
+            let mut pred_tombstones = None;
+            let mut predicates = None;
+            let mut persist_location = None;
+            while let Some(key) = map.next_key()? {
+              match key {
+                Field::DictMax => {
+                  if dict_max.is_some() {
+                      return Err(de::Error::duplicate_field("dictMax"));
+                  }
+                  dict_max = Some(map.next_value()?);
+                }
+                Field::DictTombstones => {
+                  if dict_tombstones.is_some() {
+                    return Err(de::Error::duplicate_field("dictTombstones"));
+                  }
+                  dict_tombstones = Some(map.next_value()?);
+                }
+                Field::Dict => {
+                  if dict.is_some() {
+                    return Err(de::Error::duplicate_field("dict"));
+                  }
+                  dict = Some(map.next_value::<Vec<(RdfNode, usize)>>()?);
+                }
+                Field::PredTombstones => {
+                  if pred_tombstones.is_some() {
+                      return Err(de::Error::duplicate_field("predTombstones"));
+                  }
+                  pred_tombstones = Some(map.next_value()?);
+                }
+                Field::Predicates => {
+                  if predicates.is_some() {
+                    return Err(de::Error::duplicate_field("predicates"));
+                  }
+                  predicates = Some(map.next_value::<Vec<(RdfNode, usize)>>()?);
+                }
+                Field::PersistLocation => {
+                  if persist_location.is_some() {
+                    return Err(de::Error::duplicate_field("persistLocation"));
+                  }
+                  persist_location = Some(map.next_value()?);
+                }
+              }
+            }
+            let dict_max = dict_max.ok_or_else(|| de::Error::missing_field("dictMax"))?;
+            let dict_tombstones = dict_tombstones.ok_or_else(|| de::Error::missing_field("dictTombstones"))?;
+            let dict = dict.ok_or_else(|| de::Error::missing_field("dict"))?;
+            let pred_tombstones = pred_tombstones.ok_or_else(|| de::Error::missing_field("predTombstones"))?;
+            let predicates = predicates.ok_or_else(|| de::Error::missing_field("predicates"))?;
+            let persist_location = persist_location.ok_or_else(|| de::Error::missing_field("persistLocation"))?;
             
-  //           let mut final_dict: BiBTreeMap<String, usize> = BiBTreeMap::new();
-  //           for (key, val) in dict.into_iter() {
-  //             final_dict.insert(key, val);
-  //           }
-  //           let mut final_preds: BiBTreeMap<String, usize> = BiBTreeMap::new();
-  //           for (key, val) in predicates.into_iter() {
-  //             final_preds.insert(key, val);
-  //           }
+            let mut final_dict: BiBTreeMap<RdfNode, usize> = BiBTreeMap::new();
+            for (key, val) in dict.into_iter() {
+              final_dict.insert(key, val);
+            }
+            let mut final_preds: BiBTreeMap<RdfNode, usize> = BiBTreeMap::new();
+            for (key, val) in predicates.into_iter() {
+              final_preds.insert(key, val);
+            }
 
-  //           Ok(Graph {
-  //             dict_max: dict_max,
-  //             dict_tombstones: dict_tombstones,
-  //             dict: final_dict,
-  //             pred_tombstones: pred_tombstones,
-  //             predicates: final_preds,
-  //             slices: Vec::new(),
-  //             persist_location: persist_location
-  //           })
-  //         }
-  //       }
-  //       const FIELDS: &'static [&'static str] = &[
-  //         "dict_max",
-  //         "dict_tombstones",
-  //         "dict",
-  //         "pred_tombstones",
-  //         "predicates",
-  //         "persist_location"
-  //       ];
-  //       deserializer.deserialize_struct("Graph", FIELDS, GraphVisitor)
-  //     }
-  //   }
-  //   /* Closure definitions */
-  //   let read_json = |path_to_file: &std::path::Path| -> Result<String, std::io::Error> {
-  //     use std::io::Read;
-  //     let mut buf = String::new();
-  //     std::fs::File::open(path_to_file)?.read_to_string(&mut buf)?;
-  //     Ok(buf)
-  //   };
-  //   /* Function start */
-  //   /* Define key filesystem locations */
-  //   let root_dir = std::path::Path::new(path);
-  //   let trees_dir = root_dir.join("trees");
-  //   let head_file = root_dir.join("head.json");
-  //   let dot_file = root_dir.join(".ripplebackup");
-  //   /* Check that all files and dirs actually exist */
-  //   if !root_dir.is_dir()
-  //   || !trees_dir.is_dir()
-  //   || !head_file.is_file()
-  //   || !dot_file.is_file() { /* Oof */ }
-  //   /* Build surface level of the Graph from root/head.json */
-  //   let Graph {
-  //     dict_max,
-  //     dict_tombstones,
-  //     dict,
-  //     pred_tombstones,
-  //     predicates,
-  //     slices: _,
-  //     persist_location: _
-  //   } = serde_json::from_str::<Graph>(&read_json(&head_file)?)?;
+            Ok(Graph {
+              dict_max: dict_max,
+              dict_tombstones: dict_tombstones,
+              dict: final_dict,
+              pred_tombstones: pred_tombstones,
+              predicates: final_preds,
+              slices: Vec::new(),
+              persist_location: persist_location
+            })
+          }
+        }
+        const FIELDS: &'static [&'static str] = &[
+          "dict_max",
+          "dict_tombstones",
+          "dict",
+          "pred_tombstones",
+          "predicates",
+          "persist_location"
+        ];
+        deserializer.deserialize_struct("Graph", FIELDS, GraphVisitor)
+      }
+    }
+    /* Closure definitions */
+    let read_json = |path_to_file: &std::path::Path| -> Result<String, std::io::Error> {
+      use std::io::Read;
+      let mut buf = String::new();
+      std::fs::File::open(path_to_file)?.read_to_string(&mut buf)?;
+      Ok(buf)
+    };
+    /* Function start */
+    /* Define key filesystem locations */
+    let root_dir = std::path::Path::new(path);
+    let trees_dir = root_dir.join("trees");
+    let head_file = root_dir.join("head.json");
+    let dot_file = root_dir.join(".ripplebackup");
+    /* Check that all files and dirs actually exist */
+    if !root_dir.is_dir()
+    || !trees_dir.is_dir()
+    || !head_file.is_file()
+    || !dot_file.is_file() { /* Oof */ }
+    /* Build surface level of the Graph from root/head.json */
+    let Graph {
+      dict_max,
+      dict_tombstones,
+      dict,
+      pred_tombstones,
+      predicates,
+      slices: _,
+      persist_location: _
+    } = serde_json::from_str::<Graph>(&read_json(&head_file)?)?;
 
-  //   /* Build K2Trees from json files in root/trees/ */
-  //   let mut slices: Vec<Option<Box<K2Tree>>> = Vec::new();
-  //   for i in 0.. {
-  //     if let Some(_) = predicates.get_by_right(&i) {
-  //       let tree_json = read_json(&trees_dir.join(format!("{}.json", i)))?;
-  //       slices.push(Some(Box::new(K2Tree::from_json(&tree_json)?)));
-  //     }
-  //     else if pred_tombstones.contains(&i) {
-  //       slices.push(None);
-  //     }
-  //     else {
-  //       break
-  //     }
-  //   }
+    /* Build K2Trees from json files in root/trees/ */
+    let mut slices: Vec<Option<Box<K2Tree>>> = Vec::new();
+    for i in 0.. {
+      if let Some(_) = predicates.get_by_right(&i) {
+        let tree_json = read_json(&trees_dir.join(format!("{}.json", i)))?;
+        slices.push(Some(Box::new(K2Tree::from_json(&tree_json)?)));
+      }
+      else if pred_tombstones.contains(&i) {
+        slices.push(None);
+      }
+      else {
+        break
+      }
+    }
 
-  //   Ok(Graph {
-  //     dict_max: dict_max,
-  //     dict_tombstones: dict_tombstones,
-  //     dict: dict,
-  //     pred_tombstones: pred_tombstones,
-  //     predicates: predicates,
-  //     slices: slices,
-  //     persist_location: Some(path.to_string()),
-  //   })
-  // }
+    Ok(Graph {
+      dict_max: dict_max,
+      dict_tombstones: dict_tombstones,
+      dict: dict,
+      pred_tombstones: pred_tombstones,
+      predicates: predicates,
+      slices: slices,
+      persist_location: Some(path.to_string()),
+    })
+  }
   pub fn from_rdf(path: &str) -> Result<Self, &str> {
     use crate::ripple_db::rdf::parser::ParsedTriples;
     /* Parse the RDF file at path */
@@ -229,7 +230,6 @@ impl Graph {
       dict,
       pred_max: _,
       predicates,
-      triples: _,
       partitioned_triples,
     } = match ParsedTriples::from_rdf(path) {
       Ok(p_trips) => p_trips,
@@ -335,7 +335,7 @@ impl Graph {
   }
   /*For even greater building performance get it to build the trees in the background and saved to files
     If the predicate isn't built yet on query, go build it, otherwise finish building the rest. */
-  pub fn get(&self, query: &Sparql) -> Vec<GraphNode> {
+  pub fn get(&self, query: &Sparql) -> Vec<RdfNode> {
     /* Assume only one variable */
     use std::collections::HashSet;
     use QueryUnit::{Var, Val};
@@ -406,7 +406,7 @@ impl Graph {
         }
       }).collect();
     }
-    let ret: Vec<GraphNode> = final_results.into_iter().map(|n| {
+    let ret: Vec<RdfNode> = final_results.into_iter().map(|n| {
       if var_pos(results[0].0) == 1 {
         self.predicates.get_by_right(&n).unwrap().clone()
       }
@@ -416,12 +416,8 @@ impl Graph {
     }).collect();
     ret
   }
-  pub fn insert_triple(&mut self, val: Triple) -> Result<(), ()> {
+  pub fn insert_triple(&mut self, val: RdfTriple) -> Result<(), ()> {
 
-    let val = [GraphNode::Named{iri:val[0].clone()},
-      GraphNode::Named{iri:val[1].clone()},
-      GraphNode::Named{iri:val[2].clone()}  
-    ];
     let col = match self.dict.get_by_left(&val[0]) {
       Some(&col) => col,
       None => {
@@ -517,7 +513,7 @@ impl Graph {
       None => Err(())
     }
   }
-  pub fn remove_triple(&mut self, [subject, predicate, object]: &GraphTriple) -> Result<(), ()> {
+  pub fn remove_triple(&mut self, [subject, predicate, object]: &RdfTriple) -> Result<(), ()> {
     /* TODO: Add ability to shrink matrix_width for all slices if
     needed */
     let (subject_pos, object_pos, slice_pos) = match [
@@ -640,77 +636,133 @@ impl Graph {
     }
     Ok(())
   }
-  // pub fn persist_to(&mut self, path: &str) -> Result<(), std::io::Error> {
-  //   /* Define locations to persist to */
-  //   let root_dir = std::path::Path::new(path);
-  //   /* Save the location this Graph is persisted to */
-  //   self.persist_location = Some(root_dir.to_str().unwrap().to_string());
-  //   /* Do the saving */
-  //   self.persist()
-  // }
-  // pub fn persist_location(&self) -> &Option<String> {
-  //   &self.persist_location
-  // }
-  // pub fn persist(&self) -> Result<(), std::io::Error> {
-  //   /* Only want to use this trait in this func, not public as it's not really
-  //   "serializing" the Graph and would be confusing to users if the trait was
-  //   publicly implemented */
-  //   impl Serialize for Graph {
-  //     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-  //       let mut state = serializer.serialize_struct("Graph", 6)?;
-  //       state.serialize_field("dictMax", &self.dict_max)?;
-  //       state.serialize_field("dictTombstones", &self.dict_tombstones)?;
-  //       state.serialize_field("dict", &self.dict.iter().collect() as &Vec<(&String, &usize)>)?;
-  //       state.serialize_field("predTombstones", &self.pred_tombstones)?;
-  //       state.serialize_field("predicates", &self.predicates.iter().collect() as &Vec<(&String, &usize)>)?;
-  //       state.serialize_field("persistLocation", &self.persist_location)?;
-  //       state.end()
-  //     }
-  //   }
-  //   // if let None = self.persist_location { return Err("yo") }
-  //   let path = &self.persist_location.clone().unwrap();
-  //   /* Define locations to persist to */
-  //   let root_dir = std::path::Path::new(path);
-  //   let trees_dir = root_dir.join("trees");
-  //   let head_file = root_dir.join("head.json");
-  //   let dot_file = root_dir.join(".ripplebackup");
+  pub fn persist_to(&mut self, path: &str) -> Result<(), std::io::Error> {
+    /* Define locations to persist to */
+    let root_dir = std::path::Path::new(path);
+    /* Save the location this Graph is persisted to */
+    self.persist_location = Some(root_dir.to_str().unwrap().to_string());
+    /* Do the saving */
+    self.persist()
+  }
+  pub fn persist_location(&self) -> &Option<String> {
+    &self.persist_location
+  }
+  pub fn persist(&self) -> Result<(), std::io::Error> {
+    /* Only want to use this trait in this func, not public as it's not really
+    "serializing" the Graph and would be confusing to users if the trait was
+    publicly implemented */
+    impl Serialize for Graph {
+      fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut state = serializer.serialize_struct("Graph", 6)?;
+        state.serialize_field("dictMax", &self.dict_max)?;
+        state.serialize_field("dictTombstones", &self.dict_tombstones)?;
+        state.serialize_field("dict", &self.dict.iter().collect() as &Vec<(&RdfNode, &usize)>)?;
+        state.serialize_field("predTombstones", &self.pred_tombstones)?;
+        state.serialize_field("predicates", &self.predicates.iter().collect() as &Vec<(&RdfNode, &usize)>)?;
+        state.serialize_field("persistLocation", &self.persist_location)?;
+        state.end()
+      }
+    }
+    // if let None = self.persist_location { return Err("yo") }
+    let path = &self.persist_location.clone().unwrap();
+    /* Define locations to persist to */
+    let root_dir = std::path::Path::new(path);
+    let trees_dir = root_dir.join("trees");
+    let head_file = root_dir.join("head.json");
+    let dot_file = root_dir.join(".ripplebackup");
 
-  //   if root_dir.is_dir() && dot_file.is_file() {
-  //     /* Graph's been saved here before, wipe the head_file
-  //     and files in root/trees/ */
-  //     std::fs::remove_file(&head_file)?;
-  //     for entry in std::fs::read_dir(&trees_dir)? {
-  //       let entry_path = entry?.path();
-  //       if entry_path.is_file() {
-  //         std::fs::remove_file(entry_path)?;
-  //       }
-  //     }
-  //   }
-  //   else {
-  //     std::fs::create_dir(&root_dir)?;
-  //     std::fs::create_dir(&trees_dir)?;
-  //     std::fs::File::create(&dot_file)?;
-  //   }
-  //   /* Create an serialise Graph to root/head.json */
-  //   std::fs::File::create(&head_file)?;
-  //   std::fs::write(head_file, serde_json::to_string(self)?)?;
+    if root_dir.is_dir() && dot_file.is_file() {
+      /* Graph's been saved here before, wipe the head_file
+      and files in root/trees/ */
+      std::fs::remove_file(&head_file)?;
+      for entry in std::fs::read_dir(&trees_dir)? {
+        let entry_path = entry?.path();
+        if entry_path.is_file() {
+          std::fs::remove_file(entry_path)?;
+        }
+      }
+    }
+    else {
+      std::fs::create_dir(&root_dir)?;
+      std::fs::create_dir(&trees_dir)?;
+      std::fs::File::create(&dot_file)?;
+    }
+    /* Create an serialise Graph to root/head.json */
+    std::fs::File::create(&head_file)?;
+    std::fs::write(head_file, serde_json::to_string(self)?)?;
 
-  //   /* Serialise each K2Tree and save to a json file in root/trees/,
-  //   Name each K2Tree's file after it's corresponding's predicate's
-  //   rhs value in self.predicates to aid reconstruction in future */
-  //   for (i, slice) in self.slices.iter().enumerate() {
-  //     if let Some(k2_tree) = slice {
-  //       let tree_file = trees_dir.join(format!("{}.json", i));
-  //       std::fs::File::create(&tree_file)?;
-  //       std::fs::write(tree_file, k2_tree.to_json()?)?;
-  //     }
-  //   }
+    /* Serialise each K2Tree and save to a json file in root/trees/,
+    Name each K2Tree's file after it's corresponding's predicate's
+    rhs value in self.predicates to aid reconstruction in future */
+    for (i, slice) in self.slices.iter().enumerate() {
+      if let Some(k2_tree) = slice {
+        let tree_file = trees_dir.join(format!("{}.json", i));
+        std::fs::File::create(&tree_file)?;
+        std::fs::write(tree_file, k2_tree.to_json()?)?;
+      }
+    }
 
-  //   Ok(())
-  // }
+    Ok(())
+  }
+  pub fn iter(&self) -> Iter {
+    let iter = match &self.slices.get(0) {
+      Some(Some(slice)) => Some(slice.leaves()),
+      _ => None,
+    };
+    Iter {
+      graph: self,
+      slice: 0,
+      slice_iter: iter,
+    }
+  }
 }
 
 /* Iterators */
+pub struct Iter<'a> {
+  graph: &'a Graph,
+  slice: usize,
+  slice_iter: Option<k2_tree::Leaves<'a>>,
+}
+impl<'a> Iterator for Iter<'a> {
+  type Item = RdfTriple;
+  fn next(&mut self) -> Option<Self::Item> {
+
+    if self.slice == self.graph.slices.len() { return None }
+
+    loop {
+      let leaf = match &mut self.slice_iter {
+        Some(iter) => {
+          match iter.next() {
+            Some(leaf) => Some(leaf.clone()),
+            None => None,
+          }
+        },
+        None => None,
+      };
+      match &leaf {
+        Some(leaf) => {
+          if leaf.value == true {
+            return Some([
+              self.graph.dict.get_by_right(&leaf.x).unwrap().clone(),
+              self.graph.predicates.get_by_right(&self.slice).unwrap().clone(),
+              self.graph.dict.get_by_right(&leaf.y).unwrap().clone()
+            ])
+          }
+        },
+        None => {
+          self.slice += 1;
+          while let Some(None) = self.graph.slices.get(self.slice) {
+            self.slice += 1;
+          }
+          if self.slice == self.graph.slices.len() { return None }
+          if let Some(slice) = &self.graph.slices[self.slice] {
+            self.slice_iter = Some(slice.leaves());
+          }
+        },
+      };
+    }
+  }
+}
 
 /* Std Traits */
 
@@ -744,19 +796,10 @@ impl Graph {
       }
     }).collect()
   }
-  fn to_node(s: &str) -> GraphNode {
-    GraphNode::Named{ iri: s.to_string() }
+  fn to_node(s: &str) -> RdfNode {
+    RdfNode::Named{ iri: s.to_string() }
   }
   /* Return the triples in the compact form of their dict index */
-  // fn to_rdf_subj(s: &str) -> RdfNode {
-  //   RdfNode::Subject(RdfSubject::Named{iri:s.to_string()})
-  // }
-  // fn to_rdf_pred(p: &str) -> RdfNode {
-  //   RdfNode::Predicate{iri:p.to_string()}
-  // }
-  // fn to_rdf_obj(o: &str) -> RdfNode {
-  //   RdfNode::Object(RdfObject::Named{iri:o.to_string()})
-  // }
   fn get_from_triple(&self, triple: [Option<String>; 3]) -> Vec<[usize; 3]> {
     match triple {
       [Some(s), Some(p), Some(o)] => self.spo(&s, &p, &o),
@@ -770,7 +813,7 @@ impl Graph {
     }
   }
   fn spo(&self, s: &str, p: &str, o: &str) -> Vec<[usize; 3]> {
-    match [self.dict.get_by_left(&GraphNode::Named{iri:s.to_string()}),
+    match [self.dict.get_by_left(&RdfNode::Named{iri:s.to_string()}),
       self.dict.get_by_left(&Self::to_node(o)),
       self.predicates.get_by_left(&Self::to_node(p))] {
         [Some(&x), Some(&y), Some(&slice_index)] => {
@@ -928,27 +971,6 @@ impl Graph {
 }
 
 /* Utils */
-impl Graph {
-  // pub fn heapsize(&self) -> usize {
-  //   let mut size: usize = std::mem::size_of_val(self);
-  //   size += std::mem::size_of::<usize>() * self.dict_tombstones.len();
-  //   for (string, _) in self.dict.iter() {
-  //     size += string.as_bytes().len();
-  //     size += std::mem::size_of::<usize>();
-  //   }
-  //   size += std::mem::size_of::<usize>() * self.pred_tombstones.len();
-  //   for (string, _) in self.predicates.iter() {
-  //     size += string.as_bytes().len();
-  //     size += std::mem::size_of::<usize>();
-  //   }
-  //   for slice in self.slices.iter() {
-  //     if let Some(k2tree) = slice {
-  //       size += k2tree.heapsize();
-  //     }
-  //   }
-  //   size
-  // }
-}
 fn ones_in_bitvec(bits: &BitVec) -> usize {
   bits.iter().fold(0, |total, bit| total + bit as usize)
 }

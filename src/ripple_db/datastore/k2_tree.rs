@@ -378,10 +378,11 @@ pub struct StemBit {
   stem: usize,
   bit: usize,
 }
+#[derive(Clone, Debug)]
 pub struct LeafBit {
-  value: bool,
-  x: usize,
-  y: usize,
+  pub value: bool,
+  pub x: usize,
+  pub y: usize,
 }
 pub struct Stems<'a> {
   tree: &'a K2Tree,
@@ -417,7 +418,15 @@ impl<'a> Iterator for Leaves<'a> {
   type Item = LeafBit;
   fn next(&mut self) -> Option<Self::Item> {
     /* Need get_coords(bit_pos) function for leaf bits for this */
-    unimplemented!()
+    if self.pos == self.tree.leaves.len() { return None }
+    let [x, y] = self.tree.get_coords(self.pos);
+    let value = self.tree.leaves[self.pos];
+    self.pos += 1;
+    Some(LeafBit {
+      value: value,
+      x: x,
+      y: y,
+    })
   }
 }
 pub struct StemsRaw<'a> {
@@ -529,16 +538,14 @@ impl std::convert::TryFrom<Vec<Vec<bool>>> for K2Tree {
   fn try_from(matrix: Vec<Vec<bool>>) -> Result<Self, Self::Error> {
     /* Implement error checking here */
     Ok(Self::from_matrix(
-      matrix.into_iter()
-            .map(|v| {
-              let mut bv = BitVec::new();
-              for bit in v.into_iter() {
-                bv.push(bit);
-              }
-              bv
-            }).collect()
-      ).unwrap()
-    )
+      matrix.into_iter().map(|v| {
+        let mut bv = BitVec::new();
+        for bit in v.into_iter() {
+          bv.push(bit);
+        }
+        bv
+      }).collect()
+    ).unwrap())
   }
 }
 impl Serialize for K2Tree {
@@ -671,6 +678,44 @@ struct DescendEnv {
   slayer_max: usize,
 }
 impl K2Tree {
+
+  fn leaf_parent(&self, bit_pos: usize) -> usize {
+    self.layer_start(self.max_slayers-1) + self.stem_to_leaf[bit_pos / 4]
+  }
+  fn stem_start(bit_pos: usize) -> usize {
+    bit_pos / 4 * 4
+  }
+  fn get_coords(&self, leaf_bit_pos: usize) -> [usize; 2] {
+    /* Start at the leaf_bit and traverse our way up to the top of the tree,
+    keeping track of the path we took on our way up in terms of
+    bit-positions (offsets) in the stems. Then, traverse back down the same
+    path to find the coords of the leaf_bit. */
+    let parent_bit = self.leaf_parent(leaf_bit_pos);
+    let mut stem_start = Self::stem_start(parent_bit);
+    let mut offset = parent_bit - stem_start;
+    let mut offsets = Vec::new();
+    offsets.push(offset);
+    for _ in 1..self.max_slayers {
+      let parent = self.parent(stem_start);
+      stem_start = parent.0;
+      offset = parent.1;
+      offsets.push(offset);
+    }
+    /* Reverse the offsets ready to traverse them back down the tree */
+    offsets.reverse();
+    let mut range = [[0, self.matrix_width-1], [0, self.matrix_width-1]];
+    for layer in 0..self.max_slayers {
+      range = to_4_subranges(range)[offsets[layer]];
+    }
+    let leaf_offset = leaf_bit_pos - (leaf_bit_pos/4*4);
+    match leaf_offset {
+      0 => [range[0][0], range[1][0]],
+      1 => [range[0][1], range[1][0]],
+      2 => [range[0][0], range[1][1]],
+      3 => [range[0][1], range[1][1]],
+      _ => [std::usize::MAX, std::usize::MAX],
+    }
+  }
   fn layer_from_range(&self, r: Range) -> usize {
     let r_width = r[0][1]-r[0][0]+1;
     ((self.matrix_width as f64).log(self.k as f64) as usize)
@@ -1073,5 +1118,10 @@ mod unit_tests {
     assert_eq!(tree.stems, bitvec![1,1,1,0,1,0,0,0,1,1,0,1,1,0,0,0]);
     assert_eq!(tree.leaves, bitvec![1,0,0,0,0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0]);
     assert_eq!(tree.stem_to_leaf, vec![0, 4, 5, 7, 8]);
+  }
+  #[test]
+  fn get_coords_0() {
+    let tree = K2Tree::test_tree();
+    assert_eq!(tree.get_coords(12), [0, 4]);
   }
 }

@@ -10,7 +10,7 @@ extern crate bimap;
 
 use bimap::BiBTreeMap;
 
-use super::super::{Triple, RdfTriple, RdfNode, RdfSubject, RdfObject, RdfLiteral, GraphNode, GraphTriple};
+use super::super::{Triple, RdfNode, RdfTriple};
 
 /* Pre-indexed triples to make insertion to Graph
   faster.
@@ -19,10 +19,9 @@ use super::super::{Triple, RdfTriple, RdfNode, RdfSubject, RdfObject, RdfLiteral
   to build-up. */
 pub struct ParsedTriples {
   pub dict_max: usize,
-  pub dict: BiBTreeMap<GraphNode, usize>,
+  pub dict: BiBTreeMap<RdfNode, usize>,
   pub pred_max: usize,
-  pub predicates: BiBTreeMap<GraphNode, usize>,
-  pub triples: Vec<[usize; 3]>,
+  pub predicates: BiBTreeMap<RdfNode, usize>,
   pub partitioned_triples: Vec<Vec<[usize; 2]>>, //Where surface index == predicate index
 }
 impl ParsedTriples {
@@ -95,12 +94,12 @@ impl ParsedTriples {
     //   partitioned_triples: partitioned_trips,
     // }
   }
-  pub fn from_rdf_triples(triples: Vec<GraphTriple>) -> Self {
+  pub fn from_rdf_triples(triples: Vec<RdfTriple>) -> Self {
 
     let mut dict_max: usize = 0;
-    let mut dict: BiBTreeMap<GraphNode, usize> = BiBTreeMap::new();
+    let mut dict: BiBTreeMap<RdfNode, usize> = BiBTreeMap::new();
     let mut preds_max: usize = 0;
-    let mut preds: BiBTreeMap<GraphNode, usize> = BiBTreeMap::new();
+    let mut preds: BiBTreeMap<RdfNode, usize> = BiBTreeMap::new();
     let mut indexed_trips: Vec<[usize; 3]> = Vec::new();
     let mut partitioned_trips: Vec<Vec<[usize; 2]>> = Vec::new(); //Index is the pred index
     /* Let's start aggregating shall we? */
@@ -158,7 +157,6 @@ impl ParsedTriples {
       dict: dict,
       pred_max: preds_max,
       predicates: preds,
-      triples: indexed_trips,
       partitioned_triples: partitioned_trips,
     }
   }
@@ -168,34 +166,28 @@ impl ParsedTriples {
     use rio_xml::{RdfXmlParser, RdfXmlError};
     use rio_api::{
       parser::TriplesParser,
-      model::{
-        Triple as RioTriple,
-        NamedOrBlankNode,
-        NamedNode, BlankNode,
-        Term,
-        Literal::{self, Simple, Typed, LanguageTaggedString}
-      }
+      model::{NamedOrBlankNode, NamedNode, Term, Literal}
     };
 
-    let mut triples: Vec<GraphTriple> = Vec::new();
+    let mut triples: Vec<RdfTriple> = Vec::new();
 
     RdfXmlParser::new(BufReader::new(File::open(path).unwrap()), &format!("file:{}", path))
       .unwrap()
       .parse_all(&mut |t| {
-        let s: GraphNode = match t.subject {
-          NamedOrBlankNode::BlankNode(_) => GraphNode::Blank,
-          NamedOrBlankNode::NamedNode(NamedNode{iri:s}) => GraphNode::Named{iri:s.to_string()},
+        let s = match t.subject {
+          NamedOrBlankNode::BlankNode(s) => RdfNode::Blank{id:s.to_string()},
+          NamedOrBlankNode::NamedNode(NamedNode{iri:s}) => RdfNode::Named{iri:s.to_string()},
         };
-        let p: GraphNode = match t.predicate {
-          NamedNode{iri:s} => GraphNode::Named{iri:s.to_string()},
+        let p = match t.predicate {
+          NamedNode{iri:s} => RdfNode::Named{iri:s.to_string()},
         };
-        let o: GraphNode = match t.object {
-          Term::NamedNode(NamedNode{iri:o}) => GraphNode::Named{iri:o.to_string()},
-          Term::BlankNode(_) => GraphNode::Blank,
+        let o = match t.object {
+          Term::NamedNode(NamedNode{iri:o}) => RdfNode::Named{iri:o.to_string()},
+          Term::BlankNode(o) => RdfNode::Blank{id:o.to_string()},
           Term::Literal(lit) => match lit {
-            Literal::Simple{value:o} => GraphNode::RawLit{val:o.to_string()},
-            Literal::LanguageTaggedString{value:o,language:l} => GraphNode::LangTaggedLit{val:o.to_string(),lang:l.to_string()},
-            Literal::Typed{value:o,datatype:NamedNode{iri:t}} => GraphNode::TypedLit{val:o.to_string(),datatype:t.to_string()},
+            Literal::Simple{value:o} => RdfNode::RawLit{val:o.to_string()},
+            Literal::LanguageTaggedString{value:o,language:l} => RdfNode::LangTaggedLit{val:o.to_string(),lang:l.to_string()},
+            Literal::Typed{value:o,datatype:NamedNode{iri:t}} => RdfNode::TypedLit{val:o.to_string(),datatype:t.to_string()},
           },
         };
         triples.push([s, p, o]);
