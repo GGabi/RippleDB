@@ -13,7 +13,7 @@ use serde::{
   de::{self, Visitor, MapAccess}
 };
 
-use crate::ripple_db::{
+use crate::{
   RdfNode, RdfTriple,
   datastore::k2_tree::{self, K2Tree},
   rdf::{
@@ -226,7 +226,7 @@ impl Graph {
     })
   }
   pub fn from_rdf(path: &str) -> Result<Self, &str> {
-    use crate::ripple_db::rdf::parser::ParsedTriples;
+    use crate::rdf::parser::ParsedTriples;
     /* Parse the RDF file at path */
     let ParsedTriples {
       dict_max,
@@ -846,20 +846,6 @@ impl Iterator for IntoIter {
 
 /* Private */
 impl Graph {
-  fn filter_triples_str(&self, triples: Vec<[String; 3]>, pattern: [Option<String>; 3]) -> Vec<[String; 3]> {
-    triples.into_iter().filter(|[s, p, o]| {
-      match &pattern {
-        [Some(a), Some(b), Some(c)] => { s == a && p == b && o == c },
-        [None, Some(b), Some(c)]    => { p == b && o == c },
-        [Some(a), None, Some(c)]    => { s == a && o == c },
-        [Some(a), Some(b), None]    => { s == a && p == b },
-        [None, None, Some(c)]       => { o == c },
-        [None, Some(b), None]       => { p == b },
-        [Some(a), None, None]       => { s == a },
-        [None, None, None]          => true,
-      }
-    }).collect()
-  }
   fn filter_triples(&self, triples: Vec<[usize; 3]>, pattern: [Option<usize>; 3]) -> Vec<[usize; 3]> {
     triples.into_iter().filter(|[s, p, o]| {
       match &pattern {
@@ -873,9 +859,6 @@ impl Graph {
         [None, None, None] => true,
       }
     }).collect()
-  }
-  fn to_node(s: &str) -> RdfNode {
-    RdfNode::Named{ iri: s.to_string() }
   }
   /* Return the triples in the compact form of their dict index */
   fn get_from_triple(&self, triple: [Option<String>; 3]) -> Vec<[usize; 3]> {
@@ -892,8 +875,8 @@ impl Graph {
   }
   fn spo(&self, s: &str, p: &str, o: &str) -> Vec<[usize; 3]> {
     match [self.dict.get_by_left(&RdfNode::Named{iri:s.to_string()}),
-      self.dict.get_by_left(&Self::to_node(o)),
-      self.predicates.get_by_left(&Self::to_node(p))] {
+      self.dict.get_by_left(&to_named_node(o)),
+      self.predicates.get_by_left(&to_named_node(p))] {
         [Some(&x), Some(&y), Some(&slice_index)] => {
           if let Some(slice) = &self.slices[slice_index] {
             match slice.get(x, y) {
@@ -909,8 +892,8 @@ impl Graph {
     }
   }
   fn _po(&self, p: &str, o: &str) -> Vec<[usize; 3]> {
-    match [self.dict.get_by_left(&Self::to_node(o)),
-      self.predicates.get_by_left(&Self::to_node(p))] {
+    match [self.dict.get_by_left(&to_named_node(o)),
+      self.predicates.get_by_left(&to_named_node(p))] {
         [Some(&y), Some(&slice_index)] => {
           if let Some(slice) = &self.slices[slice_index] {
             match slice.get_row(y) {
@@ -929,8 +912,8 @@ impl Graph {
     }
   }
   fn s_o(&self, s: &str, o: &str) -> Vec<[usize; 3]> {
-    match [self.dict.get_by_left(&Self::to_node(s)),
-      self.dict.get_by_left(&Self::to_node(o))] {
+    match [self.dict.get_by_left(&to_named_node(s)),
+      self.dict.get_by_left(&to_named_node(o))] {
         [Some(&x), Some(&y)] => {
           let mut triples: Vec<[usize; 3]> = Vec::new();
           for (i, slice) in self.slices.iter().enumerate() {
@@ -947,8 +930,8 @@ impl Graph {
     }
   }
   fn sp_(&self, s: &str, p: &str) -> Vec<[usize; 3]> {
-    match [self.dict.get_by_left(&Self::to_node(s)),
-      self.predicates.get_by_left(&Self::to_node(p))] {
+    match [self.dict.get_by_left(&to_named_node(s)),
+      self.predicates.get_by_left(&to_named_node(p))] {
         [Some(&x), Some(&slice_index)] => {
           if let Some(slice) = &self.slices[slice_index] {
             match slice.get_column(x) {
@@ -967,7 +950,7 @@ impl Graph {
     }
   }
   fn __o(&self, o: &str) -> Vec<[usize; 3]> {
-    match self.dict.get_by_left(&Self::to_node(o)) {
+    match self.dict.get_by_left(&to_named_node(o)) {
         Some(&y) => {
           let mut ret_v = Vec::new();
           for (index, slice) in self.slices.iter().enumerate() {
@@ -987,7 +970,7 @@ impl Graph {
     }
   }
   fn _p_(&self, p: &str) -> Vec<[usize; 3]> {
-    match self.predicates.get_by_left(&Self::to_node(p)) {
+    match self.predicates.get_by_left(&to_named_node(p)) {
       Some(&slice_index) => {
         if let Some(slice) = &self.slices[slice_index] {
           let mut ret_v = Vec::new();
@@ -1010,7 +993,7 @@ impl Graph {
     }
   }
   fn s__(&self, s: &str) -> Vec<[usize; 3]> {
-    match self.dict.get_by_left(&Self::to_node(s)) {
+    match self.dict.get_by_left(&to_named_node(s)) {
       Some(&x) => {
         let mut ret_v = Vec::new();
         for (index, slice) in self.slices.iter().enumerate() {
@@ -1049,6 +1032,9 @@ impl Graph {
 }
 
 /* Utils */
+fn to_named_node(s: &str) -> RdfNode {
+  RdfNode::Named{ iri: s.to_string() }
+}
 fn ones_in_bitvec(bits: &BitVec) -> usize {
   bits.iter().fold(0, |total, bit| total + bit as usize)
 }

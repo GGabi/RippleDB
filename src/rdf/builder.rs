@@ -3,7 +3,7 @@ extern crate rio_api;
 
 pub mod RdfBuilder {
   use {
-    crate::ripple_db::{RdfNode, RdfTriple},
+    crate::{RdfNode, RdfTriple},
     rio_xml::RdfXmlFormatter,
     rio_api::{
       formatter::TriplesFormatter,
