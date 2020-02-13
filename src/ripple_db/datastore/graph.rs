@@ -718,8 +718,28 @@ impl Graph {
       slice_iter: iter,
     }
   }
+  pub fn into_iter(self) -> IntoIter {
+    let iter = match &self.slices.get(0) {
+      Some(Some(slice)) => Some(slice.clone().into_leaves()),
+      _ => None,
+    };
+    IntoIter {
+      graph: self,
+      slice: 0,
+      slice_iter: iter,
+    }
+  }
   pub fn to_rdf(&self, path: &str) -> Result<(), std::io::Error> {
     let buf = RdfBuilder::iter_to_rdf(self.iter());
+    let file = std::path::Path::new(path);
+    if !file.is_file() {
+      std::fs::File::create(&file)?;
+      std::fs::write(file, buf)?;
+    }
+    Ok(())
+  }
+  pub fn into_rdf(self, path: &str) -> Result<(), std::io::Error> {
+    let buf = RdfBuilder::iter_to_rdf(self.into_iter());
     let file = std::path::Path::new(path);
     if !file.is_file() {
       std::fs::File::create(&file)?;
@@ -769,6 +789,52 @@ impl<'a> Iterator for Iter<'a> {
           if self.slice == self.graph.slices.len() { return None }
           if let Some(slice) = &self.graph.slices[self.slice] {
             self.slice_iter = Some(slice.leaves());
+          }
+        },
+      };
+    }
+  }
+}
+pub struct IntoIter {
+  graph: Graph,
+  slice: usize,
+  slice_iter: Option<k2_tree::IntoLeaves>
+}
+impl Iterator for IntoIter {
+  type Item = RdfTriple;
+  fn next(&mut self) -> Option<Self::Item> {
+    
+    if self.slice == self.graph.slices.len() { return None }
+
+    loop {
+      let leaf = match &mut self.slice_iter {
+        Some(iter) => {
+          match iter.next() {
+            Some(leaf) => Some(leaf.clone()),
+            None => None,
+          }
+        },
+        None => None,
+      };
+      match &leaf {
+        Some(leaf) => {
+          if leaf.value == true {
+            return Some([
+              self.graph.dict.get_by_right(&leaf.x).unwrap().clone(),
+              self.graph.predicates.get_by_right(&self.slice).unwrap().clone(),
+              self.graph.dict.get_by_right(&leaf.y).unwrap().clone()
+            ])
+          }
+        },
+        None => {
+          self.slice += 1;
+          while let Some(None) = self.graph.slices.get(self.slice) {
+            self.slice += 1;
+          }
+          if self.slice == self.graph.slices.len() { return None }
+          let slice_num  = self.slice.clone();
+          if let Some(slice) = &self.graph.slices[slice_num] {
+            self.slice_iter = Some(slice.clone().into_leaves());
           }
         },
       };

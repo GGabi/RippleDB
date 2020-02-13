@@ -287,6 +287,12 @@ impl K2Tree {
       pos: 0,
     }
   }
+  pub fn into_leaves(self) -> IntoLeaves {
+    IntoLeaves {
+      tree: self,
+      pos: 0,
+    }
+  }
   pub fn leaves_raw(&self) -> LeavesRaw {
     LeavesRaw {
       leaves: &self.leaves,
@@ -415,6 +421,25 @@ pub struct Leaves<'a> {
   pos: usize,
 }
 impl<'a> Iterator for Leaves<'a> {
+  type Item = LeafBit;
+  fn next(&mut self) -> Option<Self::Item> {
+    /* Need get_coords(bit_pos) function for leaf bits for this */
+    if self.pos == self.tree.leaves.len() { return None }
+    let [x, y] = self.tree.get_coords(self.pos);
+    let value = self.tree.leaves[self.pos];
+    self.pos += 1;
+    Some(LeafBit {
+      value: value,
+      x: x,
+      y: y,
+    })
+  }
+}
+pub struct IntoLeaves {
+  tree: K2Tree,
+  pos: usize,
+}
+impl Iterator for IntoLeaves {
   type Item = LeafBit;
   fn next(&mut self) -> Option<Self::Item> {
     /* Need get_coords(bit_pos) function for leaf bits for this */
