@@ -1,35 +1,25 @@
-extern crate bimap;
-extern crate bitvec;
-extern crate serde;
-extern crate futures;
-extern crate num_cpus;
 
-use bimap::BiBTreeMap;
-use bitvec::vec::BitVec;
-use serde::{
-  Serialize,
-  Deserialize,
-  ser::SerializeStruct,
-  de::{self, Visitor, MapAccess}
-};
-
-use crate::{
-  RdfNode, RdfTriple,
-  datastore::k2_tree::{self, K2Tree},
-  rdf::{
-    query::{Sparql, QueryUnit},
-    builder::RdfBuilder,
+use {
+  bimap::BiBTreeMap,
+  bitvec::vec::BitVec,
+  serde::{
+    Serialize,
+    Deserialize,
+    ser::SerializeStruct,
+    de::{self, Visitor, MapAccess}
+  },
+  crate::{
+    errors::GraphError as Error,
+    RdfNode, RdfTriple,
+    datastore::k2_tree::{self, K2Tree},
+    rdf::{
+      query::{Sparql, QueryUnit},
+      builder::RdfBuilder,
+    }
   }
 };
 
-/*
-  TODO:
-   x Add support for graph to store BlankNode and LangEncodedNodes rather than jus raw string
-   x Add support for TriplesParser to not ignore every triple not containing basic strings
-   x Add an iterator for Graph which produces Triples of rich types described above
-   x x Implement Leaves iterator on K2Tree
-   - Add a method to export the graph contents, produced from Graph::Iter, to RDF
-*/
+type Result<T> = std::result::Result<T, Error>;
 
 /* Subjects and Objects are mapped in the same
      collection to a unique int while Predicates
@@ -65,11 +55,10 @@ impl Graph {
       persist_location: None,
     }
   }
-  pub fn from_backup(path: &str) -> Result<Self, std::io::Error> {
-    // unimplemented!();
+  pub fn from_backup(path: &str) -> Result<Self> {
     /* Private trait impl */
     impl<'de> Deserialize<'de> for Graph {
-      fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+      fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
         #[derive(Deserialize)]
         #[serde(field_identifier, rename_all = "camelCase")]
         enum Field {
@@ -86,7 +75,7 @@ impl Graph {
           fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
             formatter.write_str("struct Graph")
           }
-          fn visit_map<V: MapAccess<'de>>(self, mut map: V) -> Result<Graph, V::Error> {
+          fn visit_map<V: MapAccess<'de>>(self, mut map: V) -> std::result::Result<Graph, V::Error> {
             let mut dict_max = None;
             let mut dict_tombstones = None;
             let mut dict = None;
@@ -172,7 +161,7 @@ impl Graph {
       }
     }
     /* Closure definitions */
-    let read_json = |path_to_file: &std::path::Path| -> Result<String, std::io::Error> {
+    let read_json = |path_to_file: &std::path::Path| -> Result<String> {
       use std::io::Read;
       let mut buf = String::new();
       std::fs::File::open(path_to_file)?.read_to_string(&mut buf)?;
@@ -185,10 +174,18 @@ impl Graph {
     let head_file = root_dir.join("head.json");
     let dot_file = root_dir.join(".ripplebackup");
     /* Check that all files and dirs actually exist */
-    if !root_dir.is_dir()
-    || !trees_dir.is_dir()
-    || !head_file.is_file()
-    || !dot_file.is_file() { /* Oof */ }
+    if !root_dir.is_dir() {
+      return Err(Error::MissingBackup(std::path::PathBuf::from(root_dir)))
+    }
+    else if !trees_dir.is_dir() {
+      return Err(Error::InvalidBackup("root/trees/".into(), std::path::PathBuf::from(root_dir)))
+    }
+    else if !head_file.is_file() {
+      return Err(Error::InvalidBackup("root/head.json".into(), std::path::PathBuf::from(root_dir)))
+    }
+    else if !dot_file.is_file() {
+      return Err(Error::InvalidBackup("root/.ripplebackup".into(), std::path::PathBuf::from(root_dir)))
+    }
     /* Build surface level of the Graph from root/head.json */
     let Graph {
       dict_max,
@@ -198,7 +195,10 @@ impl Graph {
       predicates,
       slices: _,
       persist_location: _
-    } = serde_json::from_str::<Graph>(&read_json(&head_file)?)?;
+    } = match serde_json::from_str::<Graph>(&read_json(&head_file)?) {
+      Ok(g) => g,
+      Err(e) => return Err(Error::FromBadJson(String::from("Graph"), head_file, Box::new(e))),
+    };
 
     /* Build K2Trees from json files in root/trees/ */
     let mut slices: Vec<Option<Box<K2Tree>>> = Vec::new();
@@ -225,7 +225,7 @@ impl Graph {
       persist_location: Some(path.to_string()),
     })
   }
-  pub fn from_rdf(path: &str) -> Result<Self, &str> {
+  pub fn from_rdf(path: &str) -> Result<Self> {
     use crate::rdf::parser::ParsedTriples;
     /* Parse the RDF file at path */
     let ParsedTriples {
@@ -234,10 +234,7 @@ impl Graph {
       pred_max: _,
       predicates,
       partitioned_triples,
-    } = match ParsedTriples::from_rdf(path) {
-      Ok(p_trips) => p_trips,
-      Err(_) => return Err("error parsing triples"),
-    };
+    } = ParsedTriples::from_rdf(path)?;
     let num_slices = partitioned_triples.len();
     /* Sort the Triples */
     let sorted_trips: Vec<TripleSet> = sort_by_size(partitioned_triples);
@@ -324,7 +321,7 @@ impl Graph {
         slices[predicate_index] = Some(tree);
     }
     if slices.contains(&None) {
-      return Err("a tree is dead")
+      return Err(Error::DeadK2Tree("it could not be built".into()))
     }
     Ok(Graph {
       dict_max: dict_max,
@@ -419,7 +416,7 @@ impl Graph {
     }).collect();
     ret
   }
-  pub fn insert_triple(&mut self, val: RdfTriple) -> Result<(), ()> {
+  pub fn insert_triple(&mut self, val: RdfTriple) -> Result<()> {
 
     let col = match self.dict.get_by_left(&val[0]) {
       Some(&col) => col,
@@ -511,12 +508,12 @@ impl Graph {
         new_slice
       },
     };
-    match slice {
-      Some(slice) => slice.set(col, row, true),
-      None => Err(())
+    if let Some(slice) = slice {
+      slice.set(col, row, true)?;
     }
+    Ok(())
   }
-  pub fn remove_triple(&mut self, [subject, predicate, object]: &RdfTriple) -> Result<(), ()> {
+  pub fn remove_triple(&mut self, [subject, predicate, object]: &RdfTriple) -> Result<()> {
     /* TODO: Add ability to shrink matrix_width for all slices if
     needed */
     let (subject_pos, object_pos, slice_pos) = match [
@@ -526,11 +523,9 @@ impl Graph {
         [Some(&c), Some(&r), Some(&s)] => (c, r, s),
         _ => return Ok(())
     };
-    let slice = if let Some(slice) = &mut self.slices[slice_pos] {
-        slice
-      }
-      else {
-        return Err(())
+    let slice = match &mut self.slices[slice_pos] {
+      Some(slice) => slice,
+      None => return Ok(()),
     };
     slice.set(subject_pos, object_pos, false)?;
     /* Check if we've removed all instances of a word.
@@ -639,7 +634,7 @@ impl Graph {
     }
     Ok(())
   }
-  pub fn persist_to(&mut self, path: &str) -> Result<(), std::io::Error> {
+  pub fn persist_to(&mut self, path: &str) -> Result<()> {
     /* Define locations to persist to */
     let root_dir = std::path::Path::new(path);
     /* Save the location this Graph is persisted to */
@@ -650,12 +645,12 @@ impl Graph {
   pub fn persist_location(&self) -> &Option<String> {
     &self.persist_location
   }
-  pub fn persist(&self) -> Result<(), std::io::Error> {
+  pub fn persist(&self) -> Result<()> {
     /* Only want to use this trait in this func, not public as it's not really
     "serializing" the Graph and would be confusing to users if the trait was
     publicly implemented */
     impl Serialize for Graph {
-      fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+      fn serialize<S: serde::Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
         let mut state = serializer.serialize_struct("Graph", 6)?;
         state.serialize_field("dictMax", &self.dict_max)?;
         state.serialize_field("dictTombstones", &self.dict_tombstones)?;
@@ -666,7 +661,7 @@ impl Graph {
         state.end()
       }
     }
-    // if let None = self.persist_location { return Err("yo") }
+    if let None = self.persist_location { return Err(Error::NoPersistLocation) }
     let path = &self.persist_location.clone().unwrap();
     /* Define locations to persist to */
     let root_dir = std::path::Path::new(path);
@@ -693,7 +688,6 @@ impl Graph {
     /* Create an serialise Graph to root/head.json */
     std::fs::File::create(&head_file)?;
     std::fs::write(head_file, serde_json::to_string(self)?)?;
-
     /* Serialise each K2Tree and save to a json file in root/trees/,
     Name each K2Tree's file after it's corresponding's predicate's
     rhs value in self.predicates to aid reconstruction in future */
@@ -704,7 +698,6 @@ impl Graph {
         std::fs::write(tree_file, k2_tree.to_json()?)?;
       }
     }
-
     Ok(())
   }
   pub fn iter(&self) -> Iter {
@@ -729,23 +722,11 @@ impl Graph {
       slice_iter: iter,
     }
   }
-  pub fn to_rdf(&self, path: &str) -> Result<(), std::io::Error> {
-    let buf = RdfBuilder::iter_to_rdf(self.iter());
-    let file = std::path::Path::new(path);
-    if !file.is_file() {
-      std::fs::File::create(&file)?;
-      std::fs::write(file, buf)?;
-    }
-    Ok(())
+  pub fn to_rdf(&self) -> Result<Vec<u8>> {
+    Ok(RdfBuilder::iter_to_rdf(self.iter()))
   }
-  pub fn into_rdf(self, path: &str) -> Result<(), std::io::Error> {
-    let buf = RdfBuilder::iter_to_rdf(self.into_iter());
-    let file = std::path::Path::new(path);
-    if !file.is_file() {
-      std::fs::File::create(&file)?;
-      std::fs::write(file, buf)?;
-    }
-    Ok(())
+  pub fn into_rdf(self) -> Result<Vec<u8>> {
+    Ok(RdfBuilder::iter_to_rdf(self.into_iter()))
   }
 }
 

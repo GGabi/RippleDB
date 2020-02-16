@@ -1,5 +1,3 @@
-extern crate rio_xml;
-extern crate rio_api;
 
 pub mod RdfBuilder {
   use {

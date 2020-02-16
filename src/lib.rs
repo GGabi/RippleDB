@@ -1,13 +1,14 @@
-#![allow(non_snake_case, dead_code, unused_must_use)]
+#![allow(non_snake_case)]
 
 /* Exports */
 
 pub mod datastore;
 pub mod rdf;
+pub mod errors;
 
 pub use datastore::graph::Graph as Graph;
+pub use datastore::k2_tree::K2Tree as K2Tree;
 pub use rdf::query::Sparql as SparqlQuery;
-pub use datastore::k2_tree as k2_tree;
 
 /* Common Definitions */
 

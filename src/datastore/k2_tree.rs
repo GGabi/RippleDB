@@ -1,18 +1,20 @@
-extern crate bitvec;
-extern crate serde;
-extern crate rand;
 
-use bitvec::{prelude::bitvec, vec::BitVec};
-use serde::{
-  Serialize,
-  Deserialize,
-  Serializer,
-  Deserializer,
-  ser::SerializeStruct,
-  de::{self, Visitor, MapAccess}
+use {
+  bitvec::{prelude::bitvec, vec::BitVec},
+  serde::{
+    Serialize,
+    Deserialize,
+    Serializer,
+    Deserializer,
+    ser::SerializeStruct,
+    de::{self, Visitor, MapAccess}
+  },
+  crate::errors::K2TreeError as Error
 };
 
 pub type BitMatrix = Vec<BitVec>;
+
+type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Clone)]
 pub struct K2Tree {
@@ -57,14 +59,16 @@ impl K2Tree {
   pub fn is_empty(&self) -> bool {
     ones_in_range(&self.leaves, 0, self.leaves.len()) == 0
   }
-  pub fn get(&self, x: usize, y: usize) -> Result<bool, ()> {
-    if x >= self.matrix_width || y >= self.matrix_width { return Err(()) }
+  pub fn get(&self, x: usize, y: usize) -> Result<bool> {
+    if x >= self.matrix_width || y >= self.matrix_width {
+      return Err(Error::OutOfBounds([x, y], [self.matrix_width-1; 2]))
+    }
     /* Assuming k=2 */
     match self.matrix_bit(x, y, self.matrix_width)? {
       DescendResult::Leaf(leaf_start, leaf_range) => {
         if leaf_range[0][1] - leaf_range[0][0] != 1
         || leaf_range[1][1] - leaf_range[1][0] != 1 {
-          /* ERROR: Final submatrix isn't 2x2 so can't be a leaf */
+          return Err(Error::TraverseError(x, y))
         }
         if x == leaf_range[0][0] {
           if y == leaf_range[1][0] { Ok(self.leaves[leaf_start]) }
@@ -78,28 +82,28 @@ impl K2Tree {
       DescendResult::Stem(_, _) => Ok(false),
     }
   }
-  pub fn get_row(&self, y: usize) -> Result<BitVec, ()> {
+  pub fn get_row(&self, y: usize) -> Result<BitVec> {
     let mut ret_v = BitVec::new();
     for x in 0..self.matrix_width {
       ret_v.push(self.get(x, y)?);
     }
     Ok(ret_v)
   }
-  pub fn get_column(&self, x: usize) -> Result<BitVec, ()> {
+  pub fn get_column(&self, x: usize) -> Result<BitVec> {
     let mut ret_v = BitVec::new();
     for y in 0..self.matrix_width {
       ret_v.push(self.get(x, y)?);
     }
     Ok(ret_v)
   }
-  pub fn set(&mut self, x: usize, y: usize, state: bool) -> Result<(), ()> {
+  pub fn set(&mut self, x: usize, y: usize, state: bool) -> Result<()> {
     /* Assuming k=2 */
     match self.matrix_bit(x, y, self.matrix_width)? {
       DescendResult::Leaf(leaf_start, leaf_range) => {
         if leaf_range[0][1] - leaf_range[0][0] != 1
         || leaf_range[1][1] - leaf_range[1][0] != 1 {
-          /* ERROR: Final submatrix isn't a 2 by 2 so can't be a leaf */
-          return Err(())
+          /* Final submatrix isn't a 2 by 2 so can't be a leaf */
+          return Err(Error::TraverseError(x, y))
         }
         /* Set the bit in the leaf to the new state */
         if x == leaf_range[0][0] {
@@ -122,7 +126,9 @@ impl K2Tree {
               - - Alter layer_starts if needed
               - - Find parent bit and set to 0
               - - Repeat until reach stem that isn't all 0's or reach stem layer 0 */
-          remove_block(&mut self.leaves, leaf_start, 4)?;
+          if let Err(()) = remove_block(&mut self.leaves, leaf_start, 4) {
+            return Err(Error::LeafRemovalError(leaf_start, 4))
+          }
           let stem_bit_pos = self.stem_to_leaf[leaf_start/4];
           self.stem_to_leaf.remove(leaf_start/4);
           if self.stem_to_leaf.is_empty() {
@@ -142,7 +148,9 @@ impl K2Tree {
               *layer_start -= 1; //Adjust lower layer start positions to reflect removal of stem
             }
             let (parent_stem_start, bit_offset) = self.parent(stem_start);
-            remove_block(&mut self.stems, stem_start, 4)?;
+            if let Err(()) = remove_block(&mut self.stems, stem_start, 4) {
+              return Err(Error::StemRemovalError(stem_start, 4))
+            }
             self.stems.set(parent_stem_start + bit_offset, false);
             stem_start = parent_stem_start;
             curr_layer -= 1;
@@ -179,12 +187,17 @@ impl K2Tree {
                 layer_starts_len += 1;
               }
               else {
-                stem_start = self.child_stem(layer, stem_start, child_pos)?;
+                stem_start = match self.child_stem(layer, stem_start, child_pos) {
+                  Ok(ss) => ss,
+                  Err(()) => return Err(Error::TraverseError(x, y)),
+                };
               }
               /* We're now working on the child layer */
               layer += 1;
               stem_range = subranges[child_pos];
-              insert_block(&mut self.stems, stem_start, 4)?;
+              if let Err(()) = insert_block(&mut self.stems, stem_start, 4) {
+                return Err(Error::StemInsertionError(stem_start, 4))
+              }
               /* If there are layers after the one we just insert a stem
               into: Increase the layer_starts for them by 4 to account for
               the extra stem */
@@ -239,7 +252,9 @@ impl K2Tree {
             }
             /* Create new leaf of all 0's */
             let leaf_start = stem_to_leaf_pos * 4;
-            insert_block(&mut self.leaves, leaf_start, 4)?;
+            if let Err(()) = insert_block(&mut self.leaves, leaf_start, 4) {
+              return Err(Error::LeafInsertionError(leaf_start, 4))
+            }
             /* Change bit at (x, y) to 1 */
             let leaf_range = subranges[child_pos];
             if x == leaf_range[0][0] {
@@ -317,21 +332,15 @@ impl K2Tree {
   }
   pub fn shrink_if_possible(&mut self) {
     match self.shrink() {
-      _ => return,
+      _ => ()
     }
   }
-  pub fn shrink(&mut self) -> Result<(), ()> {
-    // TODO: Add proper errors
+  pub fn shrink(&mut self) -> Result<()> {
     if self.matrix_width <= self.k.pow(3) {
-      /* Can't shrink beyond the minimum useful,
-      redundant cells in a too-large matrix is negligible
-      anyway cause they'll be compressed out as 0s by the
-      tree */
-      return Err(())
+      return Err(Error::CouldNotShrink(format!("Already at minimum size: {}", self.matrix_width)))
     }
     else if self.stems[0..4] != bitvec![1,0,0,0] {
-      /* Shrinking would lose information, can't have that */
-      return Err(())
+      return Err(Error::CouldNotShrink("Shrinking would lose information about the matrix".into()))
     }
     self.matrix_width /= self.k;
     self.max_slayers -= 1;
@@ -356,7 +365,7 @@ impl K2Tree {
   /* To / From */
   pub fn into_matrix(self) -> BitMatrix { unimplemented!() }
   pub fn to_matrix(&self) -> BitMatrix { unimplemented!() }
-  pub fn from_matrix(m: BitMatrix) -> Result<Self, ()> {
+  pub fn from_matrix(m: BitMatrix) -> Result<Self> {
     let mut tree = K2Tree::new();
     for (x, column) in m.iter().enumerate() {
       for y in one_positions(column).into_iter() {
@@ -366,18 +375,19 @@ impl K2Tree {
     Ok(tree)
   }
   /* Serialization / Deserialization */
-  pub fn to_json(&self) -> Result<String, serde_json::Error> {
-    serde_json::to_string(self)
+  pub fn to_json(&self) -> Result<String> {
+    Ok(serde_json::to_string(self)?)
   }
-  pub fn into_json(self) -> Result<String, serde_json::Error> {
-    serde_json::to_string(&self)
+  pub fn into_json(self) -> Result<String> {
+    Ok(serde_json::to_string(&self)?)
   }
-  pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
-    serde_json::from_str::<Self>(json)
+  pub fn from_json(json: &str) -> Result<Self> {
+    Ok(serde_json::from_str::<Self>(json)?)
   }
 }
 
 /* Iterators */
+#[allow(dead_code)] //Not needed yet within library yet, but users could want it
 pub struct StemBit {
   value: bool,
   layer: usize,
@@ -552,17 +562,16 @@ impl std::hash::Hash for K2Tree {
   }
 }
 impl std::convert::TryFrom<BitMatrix> for K2Tree {
-  type Error = &'static str;
-  fn try_from(bit_matrix: BitMatrix) -> Result<Self, Self::Error> {
+  type Error = Error;
+  fn try_from(bit_matrix: BitMatrix) -> Result<Self> {
     /* Implement error checking here */
-    Ok(Self::from_matrix(bit_matrix).unwrap())
+    Self::from_matrix(bit_matrix)
   }
 }
 impl std::convert::TryFrom<Vec<Vec<bool>>> for K2Tree {
-  type Error = &'static str;
-  fn try_from(matrix: Vec<Vec<bool>>) -> Result<Self, Self::Error> {
-    /* Implement error checking here */
-    Ok(Self::from_matrix(
+  type Error = Error;
+  fn try_from(matrix: Vec<Vec<bool>>) -> Result<Self> {
+    Self::from_matrix(
       matrix.into_iter().map(|v| {
         let mut bv = BitVec::new();
         for bit in v.into_iter() {
@@ -570,11 +579,11 @@ impl std::convert::TryFrom<Vec<Vec<bool>>> for K2Tree {
         }
         bv
       }).collect()
-    ).unwrap())
+    )
   }
 }
 impl Serialize for K2Tree {
-  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+  fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
     let mut state = serializer.serialize_struct("K2Tree", 7)?;
     state.serialize_field("matrixWidth", &self.matrix_width)?;
     state.serialize_field("k", &self.k)?;
@@ -587,7 +596,7 @@ impl Serialize for K2Tree {
   }
 }
 impl<'de> Deserialize<'de> for K2Tree {
-  fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+  fn deserialize<D: Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
     #[derive(Deserialize)]
     #[serde(field_identifier, rename_all = "camelCase")]
     enum Field {
@@ -605,7 +614,7 @@ impl<'de> Deserialize<'de> for K2Tree {
       fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         formatter.write_str("struct K2Tree")
       }
-      fn visit_map<V: MapAccess<'de>>(self, mut map: V) -> Result<K2Tree, V::Error> {
+      fn visit_map<V: MapAccess<'de>>(self, mut map: V) -> std::result::Result<K2Tree, V::Error> {
         let mut m_width = None;
         let mut k = None;
         let mut max_slayers = None;
@@ -703,7 +712,6 @@ struct DescendEnv {
   slayer_max: usize,
 }
 impl K2Tree {
-
   fn leaf_parent(&self, bit_pos: usize) -> usize {
     self.layer_start(self.max_slayers-1) + self.stem_to_leaf[bit_pos / 4]
   }
@@ -746,7 +754,7 @@ impl K2Tree {
     ((self.matrix_width as f64).log(self.k as f64) as usize)
     - ((r_width as f64).log(self.k as f64) as usize)
   }
-  fn matrix_bit(&self, x: usize, y: usize, m_width: usize) -> Result<DescendResult, ()> {
+  fn matrix_bit(&self, x: usize, y: usize, m_width: usize) -> Result<DescendResult> {
     let env = DescendEnv {
       x: x,
       y: y,
@@ -754,23 +762,31 @@ impl K2Tree {
     };
     self.descend(&env, 0, 0, [[0, m_width-1], [0, m_width-1]])
   }
-  fn descend(&self, env: &DescendEnv, layer: usize, stem_pos: usize, range: Range) -> Result<DescendResult, ()> {
+  fn descend(&self, env: &DescendEnv, layer: usize, stem_pos: usize, range: Range) -> Result<DescendResult> {
     let subranges = to_4_subranges(range);
     for (child_pos, child) in self.stems[stem_pos..stem_pos+4].iter().enumerate() {
       if within_range(&subranges[child_pos], env.x, env.y) {
         if !child { return Ok(DescendResult::Stem(stem_pos, range)) } //The bit exists within a range that has all zeros
         else if layer == env.slayer_max {
-          return Ok(DescendResult::Leaf(self.leaf_start(stem_pos + child_pos).unwrap(), subranges[child_pos]))
+          let leaf_start = match self.leaf_start(stem_pos + child_pos) {
+            Ok(ls) => ls,
+            Err(_) => return Err(Error::TraverseError(env.x, env.y)),
+          };
+          return Ok(DescendResult::Leaf(leaf_start, subranges[child_pos]))
         }
         else {
+          let child_stem = match self.child_stem(layer, stem_pos, child_pos) {
+            Ok(cs) => cs,
+            Err(_) => return Err(Error::TraverseError(env.x, env.y)),
+          };
           return self.descend(env,
                               layer+1,
-                              self.child_stem(layer, stem_pos, child_pos).unwrap(),
+                              child_stem,
                               subranges[child_pos])
         }
       }
     }
-    Err(()) //Should never return this
+    Err(Error::TraverseError(env.x, env.y)) //Should never return this
   }
   fn num_stems_before_child(&self, bit_pos: usize, layer: usize) -> usize {
     let layer_start = self.layer_start(layer);
@@ -790,7 +806,7 @@ impl K2Tree {
     }
     self.slayer_starts[l+1] - self.slayer_starts[l]
   }
-  fn leaf_start(&self, stem_bitpos: usize) -> Result<usize, ()> {
+  fn leaf_start(&self, stem_bitpos: usize) -> std::result::Result<usize, ()> {
     if !self.stems[stem_bitpos] { return Err(()) }
     Ok(self.stem_to_leaf
             .iter()
@@ -798,7 +814,7 @@ impl K2Tree {
             .unwrap()
             * 4)
   }
-  fn child_stem(&self, layer: usize, stem_start: usize, nth_child: usize) -> Result<usize, ()> {
+  fn child_stem(&self, layer: usize, stem_start: usize, nth_child: usize) -> std::result::Result<usize, ()> {
     if !self.stems[stem_start+nth_child]
     || layer == self.max_slayers-1 {
       /* If stem_bit is 0 or final stem layer, cannot have children */
@@ -844,9 +860,11 @@ impl K2Tree {
       (std::usize::MAX, std::usize::MAX)
     }
   }
+  #[allow(dead_code)] //Used by unit tests
   fn parent_stem(&self, stem_start: usize) -> usize {
     self.parent(stem_start).0
   }
+  #[allow(dead_code)] //Used by unit tests
   fn parent_bit(&self, stem_start: usize) -> usize {
     let (stem_start, bit_offset) = self.parent(stem_start);
     stem_start + bit_offset
@@ -865,7 +883,7 @@ impl K2Tree {
 fn block_start(bit_pos: usize, block_len: usize) -> usize {
   (bit_pos / block_len) * block_len
 }
-fn remove_block(bit_vec: &mut BitVec, block_start: usize, block_len: usize) -> Result<(), ()> {
+fn remove_block(bit_vec: &mut BitVec, block_start: usize, block_len: usize) -> std::result::Result<(), ()> {
   if block_start >= bit_vec.len()
   || block_start % block_len != 0 {
     Err(())
@@ -875,7 +893,7 @@ fn remove_block(bit_vec: &mut BitVec, block_start: usize, block_len: usize) -> R
     Ok(())
   }
 }
-fn insert_block(bit_vec: &mut BitVec, block_start: usize, block_len: usize) -> Result<(), ()> {
+fn insert_block(bit_vec: &mut BitVec, block_start: usize, block_len: usize) -> std::result::Result<(), ()> {
   if block_start > bit_vec.len()
   || block_start % block_len != 0 {
     Err(())
