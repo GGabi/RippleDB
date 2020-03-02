@@ -14,6 +14,9 @@ pub use rdf::query::Sparql as SparqlQuery;
 
 pub type Triple = [String; 3];
 pub type RdfTriple = [RdfNode; 3];
+pub fn triple_into_rdf([s, p, o]: Triple) -> RdfTriple {
+  [s.into(), p.into(), o.into()]
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize, Hash)]
 pub enum RdfNode {
@@ -26,5 +29,10 @@ pub enum RdfNode {
 impl std::convert::From<&str> for RdfNode {
   fn from(s: &str) -> Self {
     Self::Named{ iri: s.to_string() }
+  }
+}
+impl std::convert::From<String> for RdfNode {
+  fn from(s: String) -> Self {
+    Self::Named{ iri: s }
   }
 }

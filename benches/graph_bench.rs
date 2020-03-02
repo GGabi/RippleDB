@@ -1,45 +1,47 @@
 use criterion::*;
 use ripple_db::Graph;
 
+use std::path::MAIN_SEPARATOR as PATH_SEP;
+
 pub fn from_rdf(c: &mut Criterion) {
   let mut group = c.benchmark_group("graph_builder");
   group.sample_size(10);
-  // group.bench_function("Graph::from_rdf() with ~1.5MB file",
-  //   |b| b.iter(||
-  //     // Graph::from_rdf_atomicly_synced(black_box("models\\www-2011-complete.rdf"))
-  //   )
-  // );
+  group.bench_function("Graph::from_rdf() with ~0.5MB file",
+    |b| b.iter(||
+      Graph::from_rdf(black_box(&format!("models{}www-2011-complete.rdf", PATH_SEP)))
+    )
+  );
   group.finish();
 }
 
 pub fn persist_to(c: &mut Criterion) {
   let mut group = c.benchmark_group("graph_builder");
   group.sample_size(10);
-  let mut g = Graph::from_rdf("models\\lrec-2008-complete.rdf").unwrap();
-  // group.bench_function("Graph::from_rdf() with ~500KB file",
-  //   |b| b.iter(|| {
-  //     // g.persist_to(black_box("C:\\temp\\bench_test"));
-  //     // std::fs::remove_dir_all("C:\\temp\\bench_test");
-  //   })
-  // );
+  let mut g = Graph::from_rdf(&format!("models{}www-2008-complete.rdf", PATH_SEP)).unwrap();
+  group.bench_function("Graph::from_rdf() with ~0.5MB file",
+    |b| b.iter(|| {
+      g.persist_to(black_box("bench_test"));
+      std::fs::remove_dir_all("bench_test");
+    })
+  );
   group.finish();
 }
 
 pub fn from_backup(c: &mut Criterion) {
   let mut group = c.benchmark_group("graph_builder");
   group.sample_size(10);
-  let mut g = Graph::from_rdf("models\\lrec-2008-complete.rdf").unwrap();
-  // g.persist_to("C:\\temp\\bench_test");
-  // group.bench_function("Graph::from_rdf() with ~500KB file",
-  //   |b| b.iter(|| {
-  //     Graph::from_backup(black_box("C:\\temp\\bench_test"));
-  //   })
-  // );
-  // std::fs::remove_dir_all("C:\\temp\\bench_test");
+  let mut g = Graph::from_rdf(&format!("models{}www-2008-complete.rdf", PATH_SEP)).unwrap();
+  g.persist_to("bench_test");
+  group.bench_function("Graph::from_rdf() with ~0.5MB file",
+    |b| b.iter(|| {
+      Graph::from_backup(black_box("bench_test"));
+    })
+  );
+  std::fs::remove_dir_all("bench_test");
   group.finish();
 }
 
-criterion_group!(benches, from_rdf);
+criterion_group!(benches, from_rdf, persist_to, from_backup);
 criterion_main!(benches);
 
 //old on www-2011-complete.rdf: 7.40 secs (88% peak cpu)

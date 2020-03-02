@@ -235,15 +235,6 @@ impl K2Tree {
             self.stem_to_leaf.insert(stem_to_leaf_pos, layer_bit_pos);
             /* If stem is fresh, increase bit positions in stem_to_leaf
             after the new elem by 4 to account for the new stem before them */
-            /*
-              NOTE: THERES a fucking problem while updating the stem_to_leaf
-              From what it looks like:
-                When stem bit 1 is mapped to something, but then insert a stem block before
-                it and map new stem bit 3 to a leaf, the algorithm thinks that the new
-                3 is after the old 1, when it isnt anymore, so doesnt update it.
-                <<When inserting a new stem into the final layer, update stem_to_leafs to
-                match it>>
-            */
             if fresh_stem {
               let stem_to_leaf_len = self.stem_to_leaf.len();
               for parent_bit_pos in &mut self.stem_to_leaf[stem_to_leaf_pos+1..stem_to_leaf_len] {
