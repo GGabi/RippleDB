@@ -5,7 +5,7 @@ color: black
 style: center
 ---
 
-### *whoa, hey an open-source*
+# RippleDB
 {: .text-purple}
 
 <span class="fa-stack subtlecircle" style="font-size:100px; background:rgba(255,166,0,0.1)">
@@ -13,13 +13,13 @@ style: center
   <i class="fa fa-bicycle fa-stack-1x text-orange"></i>
 </span>
 
-# single-page jekyll theme
+## Intuitive GraphDB for the Performance Oriented
 {: .text-purple}
 
 
-…it's focused on delivering information quickly, easily, configurably, and stylishly!
+Implemented in Rust for the sweet, sweet speed that comes from complete control over memory-management.
 
-Want to make a single-page site to show off something cool? Go [fork me on github!](https://github.com/t413/SinglePaged)
+A simple, no-nonsense storage solution for Semantic Web data which focuses on providing an interface with a learning-curve so shallow don't realize you're climbing it!
 
 <span id="forkongithub">
   <a href="{{ site.source_link }}" class="bg-blue">
