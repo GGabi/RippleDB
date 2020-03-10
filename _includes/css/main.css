@@ -355,3 +355,12 @@ nav ul li:hover, nav ul li.active {
     column-count:         2;
   }
 }
+
+#circle {
+	width: 100px;
+	height: 100px;
+	-webkit-border-radius: 25px;
+	-moz-border-radius: 25px;
+	border-radius: 25px;
+	background: white;
+}
