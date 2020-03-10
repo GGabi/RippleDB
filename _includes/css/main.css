@@ -69,7 +69,7 @@ hr {
 .left, .container .left { text-align: left; }
 
 .container h1, .container h2, .container h3, .container h4 {
-  margin-bottom: 10px;
+  margin-bottom: 20px;
   text-align: center;
   padding: 0 4%;
 }
@@ -79,7 +79,7 @@ hr {
 }
 .container ol, .container ul { padding: 0 8%; }
 .container p:first-of-type {
-    margin-top: 20px;
+    margin-top: 40px;
 }
 
 /* keep embedded videos fluid! */
@@ -170,7 +170,7 @@ nav ul li:hover, nav ul li.active {
   display:block;
   width:100%;
   min-height:300px;
-  padding:210px 0;
+  padding:100px 0;
   background:url(img/bgnoise.png);
   /* generated noise from noisetexturegenerator.com */
 }
