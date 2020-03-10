@@ -34,6 +34,7 @@ colors:
   turquoise: '#0fbfcf'
   GhostWhite: '#f8f8ff'
   DarkSlateBlue: '#483d8b'
+  SeaGreen: '#2e8b57'
   
 
 kramdown:
