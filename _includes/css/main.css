@@ -357,10 +357,10 @@ nav ul li:hover, nav ul li.active {
 }
 
 #circle {
-	width: 100px;
-	height: 100px;
-	-webkit-border-radius: 25px;
-	-moz-border-radius: 25px;
-	border-radius: 25px;
+	width: 150px;
+	height: 150px;
+	-webkit-border-radius: 75px;
+	-moz-border-radius: 75px;
+	border-radius: 75px;
 	background: white;
 }
