@@ -44,17 +44,6 @@ impl K2Tree {
       leaves: BitVec::new(),
     }
   }
-  pub fn test_tree() -> Self {
-    K2Tree {
-      matrix_width: 8,
-      k: 2,
-      max_slayers: 2,
-      slayer_starts: vec![0, 4],
-      stems:  bitvec![0,1,1,1, 1,1,0,1, 1,0,0,0, 1,0,0,0],
-      stem_to_leaf: vec![0, 1, 3, 4, 8],
-      leaves: bitvec![0,1,1,0, 0,1,0,1, 1,1,0,0, 1,0,0,0, 0,1,1,0],
-    }
-  }
   /* Operation */
   pub fn is_empty(&self) -> bool {
     ones_in_range(&self.leaves, 0, self.leaves.len()) == 0
@@ -330,7 +319,7 @@ impl K2Tree {
     if self.matrix_width <= self.k.pow(3) {
       return Err(Error::CouldNotShrink(format!("Already at minimum size: {}", self.matrix_width)))
     }
-    else if self.stems[0..4] != bitvec![1,0,0,0] {
+    else if self.stems[1..4] != bitvec![0,0,0] {
       return Err(Error::CouldNotShrink("Shrinking would lose information about the matrix".into()))
     }
     self.matrix_width /= self.k;
@@ -360,6 +349,7 @@ impl K2Tree {
     let mut tree = K2Tree::new();
     for (x, column) in m.iter().enumerate() {
       for y in one_positions(column).into_iter() {
+        while x >= tree.matrix_width() || y >= tree.matrix_width() { tree.grow(); }
         tree.set(x, y, true)?;
       }
     }
@@ -868,6 +858,9 @@ impl K2Tree {
     size += self.leaves.len() / 8;
     size
   }
+  pub fn theoretical_size(&self) -> usize {
+    (self.stems.len() + self.leaves.len()) / 8
+  }
 }
 
 /* Utils */
@@ -919,102 +912,138 @@ fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
   .collect()
 }
 
-/* Unit Tests */
+/* Private funcs used in testing */
+impl K2Tree {
+  fn test_tree() -> Self {
+    K2Tree {
+      matrix_width: 8,
+      k: 2,
+      max_slayers: 2,
+      slayer_starts: vec![0, 4],
+      stems:  bitvec![0,1,1,1, 1,1,0,1, 1,0,0,0, 1,0,0,0],
+      stem_to_leaf: vec![0, 1, 3, 4, 8],
+      leaves: bitvec![0,1,1,0, 0,1,0,1, 1,1,0,0, 1,0,0,0, 0,1,1,0],
+    }
+  }
+}
+
+/* Public Interface Tests */
 #[cfg(test)]
-mod unit_tests {
+mod interface_tests {
   use super::*;
-    
-  use rand::Rng;
   #[test]
-  fn to_from_json_0() {
+  fn default_constructor() {
+    let expected = K2Tree {
+      matrix_width: 8,
+      k: 2,
+      max_slayers: 2,
+      slayer_starts: vec![0],
+      stems: bitvec![0,0,0,0],
+      stem_to_leaf: vec![],
+      leaves: bitvec![],
+    };
+    assert_eq!(K2Tree::new(), expected);
+  }  
+  #[test]
+  fn is_empty_0() {
+    let tree = K2Tree::new();
+    assert!(tree.is_empty());
+  }
+  #[test]
+  fn get_0() {
     let tree = K2Tree::test_tree();
-    let json = tree.to_json().unwrap();
-    let from_json_tree = K2Tree::from_json(&json).unwrap();
-    assert_eq!(tree, from_json_tree);
+    assert_eq!(false, tree.get(0, 0).unwrap());
+    assert_eq!(true, tree.get(5, 0).unwrap());
+    assert_eq!(true, tree.get(4, 1).unwrap());
+    assert_eq!(false, tree.get(7, 7).unwrap());
   }
   #[test]
-  fn flood() {
-    let mut tree = K2Tree::new();
-    for _ in 0..3 { tree.grow(); }
-    dbg!(tree.matrix_width());
-    let xs: Vec<usize> = vec![22, 22];
-    let ys: Vec<usize> = vec![33, 22];
-    for x in xs.into_iter() {
-      for y in ys.iter() {
-        tree.set(x, *y, true);
-      }
-    }
+  fn get_row_0() {
+    let tree = K2Tree::test_tree();
+    assert_eq!(
+      bitvec![0,0,0,0,0,1,0,1],
+      tree.get_row(0).unwrap()
+    );
+    assert_eq!(
+      bitvec![0,0,0,0,0,0,0,0],
+      tree.get_row(7).unwrap()
+    );
   }
   #[test]
-  fn flood_2() {
-    let mut rng = rand::thread_rng();
-    let mut tree = K2Tree::new();
-    for _ in 0..10 { tree.grow(); }
-    dbg!(tree.matrix_width());
-    let mut nums: Vec<[usize; 2]> = Vec::new();
-    for _ in 0..500 {
-      let x: usize = rng.gen_range(0, 512);
-      let y: usize = rng.gen_range(0, 512);
-      nums.push([x, y]);
-      println!("{:?}", nums);
-      tree.set(x, y, true);
-    }
+  fn get_column_0() {
+    let tree = K2Tree::test_tree();
+    assert_eq!(
+      bitvec![0,0,0,0,1,0,0,0],
+      tree.get_column(0).unwrap()
+    );
+    assert_eq!(
+      bitvec![1,1,1,0,0,0,0,0],
+      tree.get_column(7).unwrap()
+    );
   }
   #[test]
-  fn grow_0() {
+  fn set_0() {
     let mut tree = K2Tree::new();
-    assert_eq!(tree, K2Tree {
-      matrix_width: 8,
-      k: 2,
-      max_slayers: 2,
-      slayer_starts: vec![0],
-      stems: bitvec![0,0,0,0],
-      stem_to_leaf: Vec::new(),
-      leaves: BitVec::new(),
-    });
+    assert_eq!(false, tree.get(0, 0).unwrap());
+    tree.set(0, 0, true);
+    assert_eq!(true, tree.get(0, 0).unwrap());
+    tree.set(0, 0, false);
+    assert_eq!(false, tree.get(0, 0).unwrap());
+    assert_eq!(false, tree.get(7, 7).unwrap());
+    tree.set(7, 7, true);
+    assert_eq!(true, tree.get(7, 7).unwrap());
+    tree.set(7, 7, false);
+    assert_eq!(false, tree.get(7, 7).unwrap());
+    assert_eq!(false, tree.get(2, 6).unwrap());
+    tree.set(2, 6, true);
+    assert_eq!(true, tree.get(2, 6).unwrap());
+    tree.set(6, 2, true);
+    assert_eq!(true, tree.get(2, 6).unwrap());
+    assert_eq!(true, tree.get(6, 2).unwrap());
+  }
+  #[test]
+  fn matrix_width_and_grow() {
+    assert_eq!(8, K2Tree::new().matrix_width());
+    assert_eq!(8, K2Tree::test_tree().matrix_width());
+    let mut grown_tree = K2Tree::new(); grown_tree.grow();
+    assert_eq!(16, grown_tree.matrix_width());
+    grown_tree.grow();
+    assert_eq!(32, grown_tree.matrix_width());
+    for _ in 0..3 { grown_tree.grow(); }
+    assert_eq!(256, grown_tree.matrix_width());
+  }
+  #[test]
+  fn k_0() {
+    assert_eq!(2, K2Tree::new().k());
+    assert_eq!(2, K2Tree::test_tree().k());
+  }
+  #[test]
+  fn shrink_if_possible_0() {
+    let mut tree = K2Tree::new();
     tree.grow();
-    assert_eq!(tree, K2Tree {
-      matrix_width: 16,
-      k: 2,
-      max_slayers: 3,
-      slayer_starts: vec![0],
-      stems: bitvec![0,0,0,0],
-      stem_to_leaf: Vec::new(),
-      leaves: BitVec::new(),
-    });
+    assert_eq!(16, tree.matrix_width());
+    tree.shrink_if_possible();
+    assert_eq!(8, tree.matrix_width());
+    tree.shrink_if_possible();
+    assert_eq!(8, tree.matrix_width());
   }
   #[test]
-  fn grow_1() {
+  fn shrink_0() {
     let mut tree = K2Tree::new();
-    assert_eq!(tree, K2Tree {
-      matrix_width: 8,
-      k: 2,
-      max_slayers: 2,
-      slayer_starts: vec![0],
-      stems: bitvec![0,0,0,0],
-      stem_to_leaf: Vec::new(),
-      leaves: BitVec::new(),
-    });
-    for _ in 0..4 { tree.grow(); }
-    assert_eq!(tree, K2Tree {
-      matrix_width: 128,
-      k: 2,
-      max_slayers: 6,
-      slayer_starts: vec![0],
-      stems: bitvec![0,0,0,0],
-      stem_to_leaf: Vec::new(),
-      leaves: BitVec::new(),
-    });
+    tree.grow();
+    assert_eq!(16, tree.matrix_width());
+    assert!(tree.shrink().is_ok());
+    assert_eq!(8, tree.matrix_width());
+    assert!(tree.shrink().is_err());
+    assert_eq!(8, tree.matrix_width());
   }
   #[test]
-  fn test_send() {
-      fn assert_send<T: Send>() {}
-      assert_send::<K2Tree>();
-  }
-  #[test]
-  fn test_sync() {
-      fn assert_sync<T: Sync>() {}
-      assert_sync::<K2Tree>();
+  fn shrink_unchecked_0() {
+    let mut tree = K2Tree::new();
+    tree.grow();
+    assert_eq!(16, tree.matrix_width());
+    unsafe { tree.shrink_unchecked(); }
+    assert_eq!(8, tree.matrix_width());
   }
   #[test]
   fn from_matrix_0() {
@@ -1034,10 +1063,59 @@ mod unit_tests {
       max_slayers: 2,
       slayer_starts: vec![0, 4],
       stems:  bitvec![0,1,1,1, 1,1,0,1, 1,0,0,0, 1,0,0,0],
-      stem_to_leaf: vec![0, 1, 3, 4, 8],
-      leaves: bitvec![0,1,1,0, 0,1,0,1, 1,1,0,0, 1,0,0,0, 0,1,1,0]
+      stem_to_leaf: vec![1, 3, 0, 4, 8],
+      leaves: bitvec![0,1,0,1, 1,1,0,0, 0,1,1,0, 1,0,0,0, 0,1,1,0]
     };
     assert_eq!(tree, K2Tree::from_matrix(m).unwrap());
+  }
+  #[test]
+  fn to_json_0() {
+    let expected = String::from(
+      r#"{"matrixWidth":8,"k":2,"maxStemLayers":2,"stemLayerStarts":[0,4],"stems":[125,136],"stemToLeaf":[0,1,3,4,8],"leaves":[101,200,96]}"#
+    );
+    assert_eq!(K2Tree::test_tree().to_json().unwrap(), expected);
+  }
+  #[test]
+  fn from_json_0() {
+    let data = r#"{"matrixWidth":8,"k":2,"maxStemLayers":2,"stemLayerStarts":[0,4],"stems":[125,136],"stemToLeaf":[0,1,3,4,8],"leaves":[101,200,96]}"#;
+    let expected = K2Tree {
+      matrix_width: 8,
+      k: 2,
+      max_slayers: 2,
+      slayer_starts: vec![0, 4],
+      stems:  bitvec![0,1,1,1, 1,1,0,1, 1,0,0,0, 1,0,0,0],
+      stem_to_leaf: vec![0, 1, 3, 4, 8],
+      leaves: bitvec![0,1,1,0, 0,1,0,1, 1,1,0,0, 1,0,0,0, 0,1,1,0, 0,0,0,0], //Gotta explicitly add 4 useless, null bits of padding on the end 
+    };
+    assert_eq!(K2Tree::from_json(data).unwrap(), expected);
+  }
+}
+
+/* Util Tests */
+#[cfg(test)]
+mod util_tests {
+  use super::*;
+  #[test]
+  fn flood_0() {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    let mut tree = K2Tree::new();
+    for _ in 0..10 { tree.grow(); }
+    for _ in 0..500 {
+      let x: usize = rng.gen_range(0, 512);
+      let y: usize = rng.gen_range(0, 512);
+      tree.set(x, y, true);
+    }
+  }
+  #[test]
+  fn test_send() {
+    fn assert_send<T: Send>() {}
+    assert_send::<K2Tree>();
+  }
+  #[test]
+  fn test_sync() {
+    fn assert_sync<T: Sync>() {}
+    assert_sync::<K2Tree>();
   }
   #[test]
   fn one_positions_0() {
@@ -1120,38 +1198,6 @@ mod unit_tests {
     assert_eq!(tree.parent_bit(4), 1);
     assert_eq!(tree.parent_bit(8), 2);
     assert_eq!(tree.parent_bit(12), 3);
-  }
-  #[test]
-  fn set_0() {
-    let mut tree = K2Tree::test_tree();
-    assert_eq!(tree.leaves[18], true);
-    tree.set(4, 5, false);
-    assert_eq!(tree.leaves[18], false);
-  }
-  #[test]
-  fn set_1() {
-    let mut tree = K2Tree::test_tree();
-    assert_eq!(tree.stems, bitvec![0,1,1,1,1,1,0,1,1,0,0,0,1,0,0,0]);
-    assert_eq!(tree.leaves, bitvec![0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0,0,1,1,0]);
-    assert_eq!(tree.stem_to_leaf, vec![0, 1, 3, 4, 8]);
-    tree.set(4, 5, false);
-    tree.set(5, 4, false);
-    assert_eq!(tree.stems, bitvec![0,1,1,0,1,1,0,1,1,0,0,0]);
-    assert_eq!(tree.leaves, bitvec![0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0]);
-    assert_eq!(tree.stem_to_leaf, vec![0, 1, 3, 4]);
-  }
-  #[test]
-  fn set_2() {
-    let mut tree = K2Tree::test_tree();
-    assert_eq!(tree.stems, bitvec![0,1,1,1,1,1,0,1,1,0,0,0,1,0,0,0]);
-    assert_eq!(tree.leaves, bitvec![0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0,0,1,1,0]);
-    assert_eq!(tree.stem_to_leaf, vec![0, 1, 3, 4, 8]);
-    tree.set(4, 5, false);
-    tree.set(5, 4, false);
-    tree.set(0, 0, true);
-    assert_eq!(tree.stems, bitvec![1,1,1,0,1,0,0,0,1,1,0,1,1,0,0,0]);
-    assert_eq!(tree.leaves, bitvec![1,0,0,0,0,1,1,0,0,1,0,1,1,1,0,0,1,0,0,0]);
-    assert_eq!(tree.stem_to_leaf, vec![0, 4, 5, 7, 8]);
   }
   #[test]
   fn get_coords_0() {

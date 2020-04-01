@@ -1085,3 +1085,26 @@ fn sort_by_size(triples: PartitionedTriples) -> Vec<TripleSet> {
   sorted_triples.sort_by(|a, b| a.size.cmp(&b.size));
   sorted_triples
 }
+
+#[cfg(test)]
+mod interface_tests {
+  use super::*;
+  use std::path::MAIN_SEPARATOR as PATH_SEP;
+  #[test]
+  fn default_constructor() {
+    let expected = Graph {
+      dict_max: 0,
+      dict_tombstones: Vec::new(),
+      dict: BiBTreeMap::new(),
+      pred_tombstones: Vec::new(),
+      predicates: BiBTreeMap::new(),
+      slices: Vec::new(),
+      persist_location: None,
+    };
+    assert_eq!(expected, Graph::new());
+  }
+  #[test]
+  fn from_rdf_0() {
+    assert!(Graph::from_rdf(&format!("models{}www-2011-complete.rdf", PATH_SEP)).is_ok());
+  }
+}
