@@ -329,6 +329,25 @@ impl Graph {
       persist_location: None,
     })
   }
+  pub fn from_rdf_bad(path: &str) -> Result<Self> {
+    use crate::rdf::parser::ParsedTriples;
+    let ParsedTriples {
+      dict,
+      predicates,
+      partitioned_triples,
+      ..
+    } = ParsedTriples::from_rdf(path)?;
+    let mut g = Graph::new();
+    for (i, doubles) in partitioned_triples.iter().enumerate() {
+      let pred = predicates.get_by_right(&i).unwrap();
+      for [s, o] in doubles.iter() {
+        let subj = dict.get_by_right(s).unwrap();
+        let obj = dict.get_by_right(o).unwrap();
+        g.insert_triple([subj.clone(), pred.clone(), obj.clone()])?;
+      }
+    }
+    Ok(g)
+  }
   /*For even greater building performance get it to build the trees in the background and saved to files
     If the predicate isn't built yet on query, go build it, otherwise finish building the rest. */
   pub fn get(&self, query: &Sparql) -> Vec<RdfNode> {
@@ -1031,7 +1050,7 @@ fn to_named_node(s: &str) -> RdfNode {
   RdfNode::Named{ iri: s.to_string() }
 }
 fn ones_in_bitvec(bits: &BitVec) -> usize {
-  bits.iter().fold(0, |total, bit| total + bit as usize)
+  bits.iter().fold(0, |total, bit| total + *bit as usize)
 }
 fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
   bit_vec
@@ -1039,7 +1058,7 @@ fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
   .enumerate()
   .filter_map(
     |(pos, bit)|
-    if bit { Some(pos) }
+    if *bit { Some(pos) }
     else   { None })
   .collect()
 }

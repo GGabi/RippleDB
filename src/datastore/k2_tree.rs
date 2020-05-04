@@ -359,7 +359,24 @@ impl K2Tree {
     Ok(serde_json::to_string(&self)?)
   }
   pub fn from_json(json: &str) -> Result<Self> {
-    Ok(serde_json::from_str::<Self>(json)?)
+    let mut k2tree = serde_json::from_str::<Self>(json)?;
+    let last_1_stem = one_positions(&k2tree.stems).pop().unwrap();
+    let new_stem_len = if last_1_stem+1 % 4 == 0 {
+      last_1_stem
+    }
+    else {
+      ((last_1_stem / 4) + 1) * 4
+    };
+    k2tree.stems.resize(new_stem_len, false);
+    let last_1_leaf = one_positions(&k2tree.leaves).pop().unwrap();
+    let new_leaf_len = if last_1_leaf+1 % 4 == 0 {
+      last_1_leaf
+    }
+    else {
+      ((last_1_leaf / 4) + 1) * 4
+    };
+    k2tree.leaves.resize(new_leaf_len, false);
+    Ok(k2tree)
   }
 }
 
@@ -565,9 +582,9 @@ impl Serialize for K2Tree {
     state.serialize_field("k", &self.k)?;
     state.serialize_field("maxStemLayers", &self.max_slayers)?;
     state.serialize_field("stemLayerStarts", &self.slayer_starts)?;
-    state.serialize_field("stems", &self.stems.clone().into_vec() as &Vec<u8>)?;
+    state.serialize_field("stems", &self.stems.clone().into_vec() as &Vec<usize>)?;
     state.serialize_field("stemToLeaf", &self.stem_to_leaf)?;
-    state.serialize_field("leaves", &self.leaves.clone().into_vec() as &Vec<u8>)?;
+    state.serialize_field("leaves", &self.leaves.clone().into_vec() as &Vec<usize>)?;
     state.end()
   }
 }
@@ -628,7 +645,7 @@ impl<'de> Deserialize<'de> for K2Tree {
               if stems.is_some() {
                 return Err(de::Error::duplicate_field("stems"));
               }
-              stems = Some(BitVec::from(map.next_value::<Vec<u8>>()?));
+              stems = Some(BitVec::from(map.next_value::<Vec<usize>>()?));
             }
             Field::StemToLeaf => {
               if stem_to_leaf.is_some() {
@@ -640,7 +657,7 @@ impl<'de> Deserialize<'de> for K2Tree {
               if leaves.is_some() {
                 return Err(de::Error::duplicate_field("leaves"));
               }
-              leaves = Some(BitVec::from(map.next_value::<Vec<u8>>()?));
+              leaves = Some(BitVec::from_vec(map.next_value::<Vec<usize>>()?));
             }
           }
         }
@@ -824,7 +841,7 @@ impl K2Tree {
       let mut i = 0;
       let mut bit_pos_in_parent_stem_layer = 0;
       for bit in &self.stems[parent_layer_start..curr_layer_start] {
-        if bit {
+        if *bit {
           if i == nth_stem_in_layer { break }
           i += 1;
         }
@@ -895,7 +912,7 @@ fn within_range(r: &Range, x: usize, y: usize) -> bool {
   x >= r[0][0] && x <= r[0][1] && y >= r[1][0] && y <= r[1][1]
 }
 fn ones_in_range(bits: &BitVec, begin: usize, end: usize) -> usize {
-  bits[begin..end].iter().fold(0, |total, bit| total + bit as usize)
+  bits[begin..end].iter().fold(0, |total, bit| total + *bit as usize)
 }
 fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
   bit_vec
@@ -903,7 +920,7 @@ fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
   .enumerate()
   .filter_map(
     |(pos, bit)|
-    if bit { Some(pos) }
+    if *bit { Some(pos) }
     else   { None })
   .collect()
 }
@@ -1069,13 +1086,13 @@ mod interface_tests {
   #[test]
   fn to_json_0() {
     let expected = String::from(
-      r#"{"matrixWidth":8,"k":2,"maxStemLayers":2,"stemLayerStarts":[0,4],"stems":[125,136],"stemToLeaf":[0,1,3,4,8],"leaves":[101,200,96]}"#
+      r#"{"matrixWidth":8,"k":2,"maxStemLayers":2,"stemLayerStarts":[0,4],"stems":[4542],"stemToLeaf":[0,1,3,4,8],"leaves":[398246]}"#
     );
     assert_eq!(K2Tree::test_tree().to_json().unwrap(), expected);
   }
   #[test]
   fn from_json_0() {
-    let data = r#"{"matrixWidth":8,"k":2,"maxStemLayers":2,"stemLayerStarts":[0,4],"stems":[125,136],"stemToLeaf":[0,1,3,4,8],"leaves":[101,200,96]}"#;
+    let data = r#"{"matrixWidth":8,"k":2,"maxStemLayers":2,"stemLayerStarts":[0,4],"stems":[4542],"stemToLeaf":[0,1,3,4,8],"leaves":[398246]}"#;
     let expected = K2Tree {
       matrix_width: 8,
       k: 2,
@@ -1083,8 +1100,9 @@ mod interface_tests {
       slayer_starts: vec![0, 4],
       stems:  bitvec![0,1,1,1, 1,1,0,1, 1,0,0,0, 1,0,0,0],
       stem_to_leaf: vec![0, 1, 3, 4, 8],
-      leaves: bitvec![0,1,1,0, 0,1,0,1, 1,1,0,0, 1,0,0,0, 0,1,1,0, 0,0,0,0], //Gotta explicitly add 4 useless, null bits of padding on the end 
+      leaves: bitvec![0,1,1,0, 0,1,0,1, 1,1,0,0, 1,0,0,0, 0,1,1,0], //Gotta explicitly add 4 useless, null bits of padding on the end 
     };
+    println!("{}", expected.to_json().unwrap());
     assert_eq!(K2Tree::from_json(data).unwrap(), expected);
   }
 }
