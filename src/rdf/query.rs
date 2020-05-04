@@ -24,7 +24,6 @@ impl From<String> for QueryUnit {
   }
 }
 
-
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Sparql {
   pub vars: Vec<QueryUnit>,

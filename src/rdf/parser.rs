@@ -23,7 +23,7 @@ impl ParsedTriples {
 
     let mut dict_max: usize = 0;
     let mut dict: BiBTreeMap<RdfNode, usize> = BiBTreeMap::new();
-    let mut preds_max: usize = 0;
+    let mut pred_max: usize = 0;
     let mut preds: BiBTreeMap<RdfNode, usize> = BiBTreeMap::new();
     let mut indexed_trips: Vec<[usize; 3]> = Vec::new();
     let mut partitioned_trips: Vec<Vec<[usize; 2]>> = Vec::new(); //Index is the pred index
@@ -55,10 +55,10 @@ impl ParsedTriples {
           fresh_pred = false;
         }
         else {
-          preds_max += 1;
+          pred_max += 1;
         }
-        preds.insert(pred, preds_max);
-        t[1] = preds_max;
+        preds.insert(pred, pred_max);
+        t[1] = pred_max;
       }
       if let Some(&o) = dict.get_by_left(&obj) {
         t[2] = o;
@@ -78,9 +78,9 @@ impl ParsedTriples {
     }
     
     ParsedTriples {
-      dict_max: dict_max,
-      dict: dict,
-      pred_max: preds_max,
+      dict_max,
+      dict,
+      pred_max,
       predicates: preds,
       partitioned_triples: partitioned_trips,
     }
@@ -126,8 +126,9 @@ impl ParsedTriples {
 mod unit_tests {
   use super::*;
   #[test]
-  fn try_parse() {
+  fn try_parse() -> Result<()> {
     use std::path::MAIN_SEPARATOR as PATH_SEP;
-    ParsedTriples::from_rdf(&format!("models{}cold-2010-complete.rdf", PATH_SEP));
+    ParsedTriples::from_rdf(&format!("models{}cold-2010-complete.rdf", PATH_SEP))?;
+    Ok(())
   }
 }

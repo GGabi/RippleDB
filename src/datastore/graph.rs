@@ -27,11 +27,8 @@ type Result<T> = std::result::Result<T, Error>;
    Each slice contains a representation of a 2-d bit matrix,
      each cell corresponding to a Subject-Object pair
      connected by a single Predicate. */
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct Graph {
-  //Store dict_max because the max R-value in a dict is expensive to calulate on-the-fly
-  //Store tombstone-indices for dict and predicates to be reused in later inserts
-  //Use BiMap instead of HashMap because we want to be able to find the strings rows/columns represent
   dict_max: usize,
   dict_tombstones: Vec<usize>,
   dict: BiBTreeMap<RdfNode, usize>,
@@ -139,17 +136,17 @@ impl Graph {
             }
 
             Ok(Graph {
-              dict_max: dict_max,
-              dict_tombstones: dict_tombstones,
+              dict_max,
+              dict_tombstones,
               dict: final_dict,
-              pred_tombstones: pred_tombstones,
+              pred_tombstones,
               predicates: final_preds,
               slices: Vec::new(),
-              persist_location: persist_location
+              persist_location
             })
           }
         }
-        const FIELDS: &'static [&'static str] = &[
+        const FIELDS: &[&str] = &[
           "dict_max",
           "dict_tombstones",
           "dict",
@@ -193,8 +190,7 @@ impl Graph {
       dict,
       pred_tombstones,
       predicates,
-      slices: _,
-      persist_location: _
+      ..
     } = match serde_json::from_str::<Graph>(&read_json(&head_file)?) {
       Ok(g) => g,
       Err(e) => return Err(Error::FromBadJson(String::from("Graph"), head_file, Box::new(e))),
@@ -203,7 +199,7 @@ impl Graph {
     /* Build K2Trees from json files in root/trees/ */
     let mut slices: Vec<Option<Box<K2Tree>>> = Vec::new();
     for i in 0.. {
-      if let Some(_) = predicates.get_by_right(&i) {
+      if predicates.get_by_right(&i).is_some() {
         let tree_json = read_json(&trees_dir.join(format!("{}.json", i)))?;
         slices.push(Some(Box::new(K2Tree::from_json(&tree_json)?)));
       }
@@ -216,12 +212,12 @@ impl Graph {
     }
 
     Ok(Graph {
-      dict_max: dict_max,
-      dict_tombstones: dict_tombstones,
-      dict: dict,
-      pred_tombstones: pred_tombstones,
-      predicates: predicates,
-      slices: slices,
+      dict_max,
+      dict_tombstones,
+      dict,
+      pred_tombstones,
+      predicates,
+      slices,
       persist_location: Some(path.to_string()),
     })
   }
@@ -231,9 +227,9 @@ impl Graph {
     let ParsedTriples {
       dict_max,
       dict,
-      pred_max: _,
       predicates,
       partitioned_triples,
+      ..
     } = ParsedTriples::from_rdf(path)?;
     let num_slices = partitioned_triples.len();
     /* Sort the Triples */
@@ -324,12 +320,12 @@ impl Graph {
       return Err(Error::DeadK2Tree("it could not be built".into()))
     }
     Ok(Graph {
-      dict_max: dict_max,
+      dict_max,
       dict_tombstones: Vec::new(),
-      dict: dict,
+      dict,
       pred_tombstones: Vec::new(),
-      predicates: predicates,
-      slices: slices,
+      predicates,
+      slices,
       persist_location: None,
     })
   }
@@ -363,11 +359,11 @@ impl Graph {
       results.push((cond, res));
     }
     /* Filter results */
-    let mut final_results: Vec<usize> = results[0].1.iter().map(|[s, p, o]|
+    let mut final_results: Vec<usize> = results[0].1.iter().map(|&[s, p, o]|
       match var_pos(results[0].0) {
-        0 => s.clone(),
-        1 => p.clone(),
-        2 => o.clone(),
+        0 => s,
+        1 => p,
+        2 => o,
         _ => std::usize::MAX,
       }
     ).collect();
@@ -379,9 +375,9 @@ impl Graph {
         if !used_vars_vals.contains(final_result) {
           used_vars_vals.insert(final_result.clone());
           let filter_t = match qt_var_pos {
-            0 => [Some(final_result.clone()), None, None],
-            1 => [None, Some(final_result.clone()), None],
-            2 => [None, None, Some(final_result.clone())],
+            0 => [Some(*final_result), None, None],
+            1 => [None, Some(*final_result), None],
+            2 => [None, None, Some(*final_result)],
             _ => [None, None, None],
           };
           if self.filter_triples(qt_results.clone(), filter_t).is_empty() {
@@ -417,7 +413,6 @@ impl Graph {
     ret
   }
   pub fn insert_triple(&mut self, val: RdfTriple) -> Result<()> {
-
     let col = match self.dict.get_by_left(&val[0]) {
       Some(&col) => col,
       None => {
@@ -661,7 +656,7 @@ impl Graph {
         state.end()
       }
     }
-    if let None = self.persist_location { return Err(Error::NoPersistLocation) }
+    if self.persist_location.is_none() { return Err(Error::NoPersistLocation) }
     let path = &self.persist_location.clone().unwrap();
     /* Define locations to persist to */
     let root_dir = std::path::Path::new(path);
@@ -711,17 +706,6 @@ impl Graph {
       slice_iter: iter,
     }
   }
-  pub fn into_iter(self) -> IntoIter {
-    let iter = match &self.slices.get(0) {
-      Some(Some(slice)) => Some(slice.clone().into_leaves()),
-      _ => None,
-    };
-    IntoIter {
-      graph: self,
-      slice: 0,
-      slice_iter: iter,
-    }
-  }
   pub fn to_rdf(&self) -> Result<Vec<u8>> {
     Ok(RdfBuilder::iter_to_rdf(self.iter()))
   }
@@ -754,7 +738,7 @@ impl<'a> Iterator for Iter<'a> {
       };
       match &leaf {
         Some(leaf) => {
-          if leaf.value == true {
+          if leaf.value {
             return Some([
               self.graph.dict.get_by_right(&leaf.x).unwrap().clone(),
               self.graph.predicates.get_by_right(&self.slice).unwrap().clone(),
@@ -799,7 +783,7 @@ impl Iterator for IntoIter {
       };
       match &leaf {
         Some(leaf) => {
-          if leaf.value == true {
+          if leaf.value {
             return Some([
               self.graph.dict.get_by_right(&leaf.x).unwrap().clone(),
               self.graph.predicates.get_by_right(&self.slice).unwrap().clone(),
@@ -813,12 +797,27 @@ impl Iterator for IntoIter {
             self.slice += 1;
           }
           if self.slice == self.graph.slices.len() { return None }
-          let slice_num  = self.slice.clone();
+          let slice_num  = self.slice;
           if let Some(slice) = &self.graph.slices[slice_num] {
             self.slice_iter = Some(slice.clone().into_leaves());
           }
         },
       };
+    }
+  }
+}
+impl IntoIterator for Graph {
+  type Item = RdfTriple;
+  type IntoIter = IntoIter;
+  fn into_iter(self) -> Self::IntoIter {
+    let iter = match &self.slices.get(0) {
+      Some(Some(slice)) => Some(slice.clone().into_leaves()),
+      _ => None,
+    };
+    IntoIter {
+      graph: self,
+      slice: 0,
+      slice_iter: iter,
     }
   }
 }
@@ -1010,6 +1009,21 @@ impl Graph {
     };
     ret_v
   }
+  pub fn footprint(&self) -> usize {
+    let mut size: usize = std::mem::size_of_val(self);
+    size += std::mem::size_of::<usize>() * self.dict_tombstones.len();
+    size += std::mem::size_of::<(RdfNode, usize)>() * self.dict.len(); //BiMaps use Rc<>s to not double values within, one len needed
+    size += std::mem::size_of::<usize>() * self.pred_tombstones.len();
+    size += std::mem::size_of::<(RdfNode, usize)>() * self.predicates.len();
+    size += std::mem::size_of::<Option<Box<K2Tree>>>() * self.slices.len();
+    for slice in &self.slices {
+      if let Some(k2tree) = slice {
+        size += k2tree.footprint();
+      }
+    }
+    size += std::mem::size_of::<Option<String>>();
+    size
+  }
 }
 
 /* Utils */
@@ -1060,9 +1074,9 @@ fn build_slices(triple_sets: Vec<TripleSet>, dict_max: usize) -> Vec<Slice> {
   executor::block_on(async {
     let mut futs = FuturesUnordered::new();
     for TripleSet {
-      size: _,
       predicate_index: pi,
-      doubles: ds
+      doubles: ds,
+      ..
     } in &triple_sets {
       futs.push(build_tree(*pi, ds, dict_max));
     }
@@ -1079,7 +1093,7 @@ fn sort_by_size(triples: PartitionedTriples) -> Vec<TripleSet> {
     .map(|(i, doubles)| TripleSet{
       size: doubles.len(),
       predicate_index: i,
-      doubles: doubles
+      doubles
     })
     .collect::<Vec<TripleSet>>();
   sorted_triples.sort_by(|a, b| a.size.cmp(&b.size));
@@ -1106,5 +1120,137 @@ mod interface_tests {
   #[test]
   fn from_rdf_0() {
     assert!(Graph::from_rdf(&format!("models{}www-2011-complete.rdf", PATH_SEP)).is_ok());
+  }
+}
+
+#[cfg(test)]
+mod benches {
+  use super::*;
+  use time_test::*;
+  #[test]
+  fn compression_test() -> Result<()> {
+    let read_dir = std::fs::read_dir("models")?;
+    for file in read_dir {
+      let file = file?;
+      let size_kb = (file.metadata()?.len() / 1024) as usize;
+      if let Ok(graph) = Graph::from_rdf(&file.path().as_path().to_str().unwrap()) {
+        let g_size_kb = graph.footprint() / 1024;
+        println!("File size: {}kb, Graph size: {}kb", size_kb, g_size_kb);
+      }
+    }
+    Ok(())
+  }
+  #[test]
+  fn build_speed_test() -> Result<()> {
+    time_test!();
+    let read_dir = std::fs::read_dir("models")?;
+    for file in read_dir {
+      let file = file?;
+      let size_kb = (file.metadata()?.len() / 1024) as usize;
+      {
+        time_test!(format!("RDF file size: {}kb", size_kb));
+        if let Err(_) = Graph::from_rdf(&file.path().as_path().to_str().unwrap()) {
+          print!("\n <= IGNORE");
+        }
+        else {
+          println!();
+        }
+      }
+    }
+    Ok(())
+  }
+  #[test]
+  fn backup_speed_test() -> Result<()> {
+    let read_dir = std::fs::read_dir("models")?;
+    for file in read_dir {
+      let file = file?;
+      if let Ok(mut g) = Graph::from_rdf(&file.path().as_path().to_str().unwrap()) {
+        {
+          time_test!(format!("Graph size: {}kb", g.footprint() / 1024));
+          g.persist_to("bench_test")?;
+        }
+        println!();
+        std::fs::remove_dir_all("bench_test")?;
+      }
+    }
+    Ok(())
+  }
+  #[test]
+  fn rebuild_speed_test() -> Result<()> {
+    let read_dir = std::fs::read_dir("models")?;
+    for file in read_dir {
+      let file = file?;
+      if let Ok(mut g) = Graph::from_rdf(&file.path().as_path().to_str().unwrap()) {
+        g.persist_to("bench_test")?;
+        {
+          time_test!(format!("Backup size: {}kb", dir_size("bench_test")? / 1024));
+          Graph::from_backup("bench_test")?;
+        }
+        println!();
+        std::fs::remove_dir_all("bench_test")?;
+      }
+    }
+    Ok(())
+  }
+  #[test]
+  fn export_speed_test() -> Result<()> {
+    let read_dir = std::fs::read_dir("models")?;
+    for file in read_dir {
+      let file = file?;
+      if let Ok(g) = Graph::from_rdf(&file.path().as_path().to_str().unwrap()) {
+        time_test!(format!("Graph size: {}kb", g.footprint() / 1024));
+        g.into_rdf()?;
+        println!();
+      }
+    }
+    Ok(())
+  }
+  #[test]
+  fn backup_size_test() -> Result<()> {
+    let read_dir = std::fs::read_dir("models")?;
+    for file in read_dir {
+      let file = file?;
+      if let Ok(mut g) = Graph::from_rdf(&file.path().as_path().to_str().unwrap()) {
+        g.persist_to("bench_test")?;
+        println!("{}, {}",
+          g.footprint() / 1024,
+          dir_size("bench_test")? / 1024
+        );
+        std::fs::remove_dir_all("bench_test")?;
+      }
+    }
+    Ok(())
+  }
+  #[test]
+  fn rdf_vs_backup_test() -> Result<()> {
+    let read_dir = std::fs::read_dir("models")?;
+    for file in read_dir {
+      let file = file?;
+      let size_kb = (file.metadata()?.len() / 1024) as usize;
+      if let Ok(mut g) = Graph::from_rdf(&file.path().as_path().to_str().unwrap()) {
+        g.persist_to("bench_test")?;
+        println!("{}, {}",
+          size_kb,
+          dir_size("bench_test")? / 1024
+        );
+        std::fs::remove_dir_all("bench_test")?;
+      }
+    }
+    Ok(())
+  }
+  fn dir_size(path: impl Into<std::path::PathBuf>) -> std::io::Result<u64> {
+    use std::{fs, io};
+    fn dir_size(mut dir: fs::ReadDir) -> io::Result<u64> {
+      dir.try_fold(0, |acc, file| {
+        let file = file?;
+        let size = match file.metadata()? {
+          data if data.is_dir() => dir_size(fs::read_dir(file.path())?)?,
+          data => data.len(),
+        };
+        Ok(acc + size)
+      })
+    }
+
+    dir_size(fs::read_dir(path.into())?)
   }
 }
