@@ -329,25 +329,6 @@ impl Graph {
       persist_location: None,
     })
   }
-  pub fn from_rdf_bad(path: &str) -> Result<Self> {
-    use crate::rdf::parser::ParsedTriples;
-    let ParsedTriples {
-      dict,
-      predicates,
-      partitioned_triples,
-      ..
-    } = ParsedTriples::from_rdf(path)?;
-    let mut g = Graph::new();
-    for (i, doubles) in partitioned_triples.iter().enumerate() {
-      let pred = predicates.get_by_right(&i).unwrap();
-      for [s, o] in doubles.iter() {
-        let subj = dict.get_by_right(s).unwrap();
-        let obj = dict.get_by_right(o).unwrap();
-        g.insert_triple([subj.clone(), pred.clone(), obj.clone()])?;
-      }
-    }
-    Ok(g)
-  }
   /*For even greater building performance get it to build the trees in the background and saved to files
     If the predicate isn't built yet on query, go build it, otherwise finish building the rest. */
   pub fn get(&self, query: &Sparql) -> Vec<RdfNode> {
@@ -1250,7 +1231,7 @@ mod benches {
         g.persist_to("bench_test")?;
         println!("{}, {}",
           size_kb,
-          dir_size("bench_test")? / 1024
+          dir_size("bench_test")? / 1024 //Size in Kilobytes
         );
         std::fs::remove_dir_all("bench_test")?;
       }
