@@ -1,7 +1,7 @@
 
 use {
+  k2_tree::K2Tree,
   bimap::BiBTreeMap,
-  bitvec::vec::BitVec,
   serde::{
     Serialize,
     Deserialize,
@@ -11,7 +11,6 @@ use {
   crate::{
     errors::GraphError as Error,
     RdfNode, RdfTriple,
-    datastore::k2_tree::{self, K2Tree},
     rdf::{
       query::{Sparql, QueryUnit},
       builder::RdfBuilder,
@@ -201,7 +200,7 @@ impl Graph {
     for i in 0.. {
       if predicates.get_by_right(&i).is_some() {
         let tree_json = read_json(&trees_dir.join(format!("{}.json", i)))?;
-        slices.push(Some(Box::new(K2Tree::from_json(&tree_json)?)));
+        slices.push(Some(Box::new(serde_json::from_str(&tree_json)?)));
       }
       else if pred_tombstones.contains(&i) {
         slices.push(None);
@@ -564,21 +563,20 @@ impl Graph {
     }
     let mut subject_exists = false;
     let mut object_exists = false;
-    for slice in
-      self.slices.iter().filter(|slice|
-        match slice {
-          Some(slice) => !slice.is_empty(),
-          None => false,
-        }) {
+    for slice in self.slices.iter().filter(|slice|
+      match slice {
+        Some(slice) => !slice.is_empty(),
+        None => false,
+    }) {
       if let Some(slice) = slice {
         if !subject_exists
-        && (ones_in_bitvec(&slice.get_row(subject_pos)?) > 0
-        || ones_in_bitvec(&slice.get_column(subject_pos)?) > 0) {
+        && (ones_in_vec(&slice.get_row(subject_pos)?) > 0
+        || ones_in_vec(&slice.get_column(subject_pos)?) > 0) {
           subject_exists = true;
         }
         if !object_exists
-        && (ones_in_bitvec(&slice.get_row(object_pos)?) > 0
-        || ones_in_bitvec(&slice.get_column(object_pos)?) > 0) {
+        && (ones_in_vec(&slice.get_row(object_pos)?) > 0
+        || ones_in_vec(&slice.get_column(object_pos)?) > 0) {
           object_exists = true;
         }
         if subject_exists && object_exists { break }
@@ -690,7 +688,7 @@ impl Graph {
       if let Some(k2_tree) = slice {
         let tree_file = trees_dir.join(format!("{}.json", i));
         std::fs::File::create(&tree_file)?;
-        std::fs::write(tree_file, k2_tree.to_json()?)?;
+        std::fs::write(tree_file, serde_json::to_string(k2_tree)?)?;
       }
     }
     Ok(())
@@ -718,7 +716,7 @@ impl Graph {
 pub struct Iter<'a> {
   graph: &'a Graph,
   slice: usize,
-  slice_iter: Option<k2_tree::Leaves<'a>>,
+  slice_iter: Option<k2_tree::tree::Leaves<'a>>,
 }
 impl<'a> Iterator for Iter<'a> {
   type Item = RdfTriple;
@@ -763,7 +761,7 @@ impl<'a> Iterator for Iter<'a> {
 pub struct IntoIter {
   graph: Graph,
   slice: usize,
-  slice_iter: Option<k2_tree::IntoLeaves>
+  slice_iter: Option<k2_tree::tree::IntoLeaves>
 }
 impl Iterator for IntoIter {
   type Item = RdfTriple;
@@ -1018,7 +1016,10 @@ impl Graph {
     size += std::mem::size_of::<Option<Box<K2Tree>>>() * self.slices.len();
     for slice in &self.slices {
       if let Some(k2tree) = slice {
-        size += k2tree.footprint();
+        size += std::mem::size_of::<usize>() * 3; // stem_k, leaf_k, max_slayers
+        size += std::mem::size_of::<bitvec::vec::BitVec>() * 2; // stems, leaves
+        size += k2tree.stems.len() / 8; // Need it in bytes
+        size += k2tree.leaves.len() / 8;
       }
     }
     size += std::mem::size_of::<Option<String>>();
@@ -1030,10 +1031,10 @@ impl Graph {
 fn to_named_node(s: &str) -> RdfNode {
   RdfNode::Named{ iri: s.to_string() }
 }
-fn ones_in_bitvec(bits: &BitVec) -> usize {
+fn ones_in_vec(bits: &Vec<bool>) -> usize {
   bits.iter().fold(0, |total, bit| total + *bit as usize)
 }
-fn one_positions(bit_vec: &BitVec) -> Vec<usize> {
+fn one_positions(bit_vec: &Vec<bool>) -> Vec<usize> {
   bit_vec
   .iter()
   .enumerate()

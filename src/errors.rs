@@ -10,7 +10,7 @@ pub enum GraphError {
   Io(Source<std::io::Error>),
   Serde(Source<serde_json::Error>),
   DeadK2Tree(String),
-  K2Tree(Source<K2TreeError>),
+  K2Tree(Source<k2_tree::error::K2TreeError>),
   Parser(Source<ParserError>),
 }
 impl std::error::Error for GraphError {
@@ -51,8 +51,8 @@ impl From<serde_json::Error> for GraphError {
     GraphError::Serde(Box::new(err))
   }
 }
-impl From<K2TreeError> for GraphError {
-  fn from(err: K2TreeError) -> GraphError {
+impl From<k2_tree::error::K2TreeError> for GraphError {
+  fn from(err: k2_tree::error::K2TreeError) -> GraphError {
     GraphError::K2Tree(Box::new(err))
   }
 }

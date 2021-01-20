@@ -2,13 +2,12 @@
 
 /* Exports */
 
-//bruh
 pub mod datastore;
 pub mod rdf;
 pub mod errors;
 
 pub use datastore::graph::Graph as Graph;
-pub use datastore::k2_tree::K2Tree as K2Tree;
+// pub use datastore::k2_tree::K2Tree as K2Tree;
 pub use rdf::query::Sparql as SparqlQuery;
 
 /* Common Definitions */
