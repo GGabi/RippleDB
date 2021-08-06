@@ -12,6 +12,7 @@ pub enum GraphError {
   DeadK2Tree(String),
   K2Tree(Source<k2_tree::error::K2TreeError>),
   Parser(Source<ParserError>),
+  Other //TODO
 }
 impl std::error::Error for GraphError {
   fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -38,6 +39,7 @@ impl std::fmt::Display for GraphError {
       DeadK2Tree(reason) => write!(f, "Graph's K2Tree is invalid and considered dead because {}, meaning that the Graph's integrity is most likely compromised.", reason),
       K2Tree(e) => write!(f, "{}", *e),
       Parser(e) => write!(f, "{}", *e),
+      Other => write!(f, "Other"),
     }
   }
 }
@@ -59,6 +61,11 @@ impl From<k2_tree::error::K2TreeError> for GraphError {
 impl From<ParserError> for GraphError {
   fn from(err: ParserError) -> GraphError {
     GraphError::Parser(Box::new(err))
+  }
+}
+impl From<()> for GraphError {
+  fn from(err: ()) -> GraphError {
+    GraphError::Other
   }
 }
 
